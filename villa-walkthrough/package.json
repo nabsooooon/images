@@ -1,0 +1,20 @@
+{
+  "name": "villa-walkthrough",
+  "private": true,
+  "type": "module",
+  "description": "Visite 3D d'une villa générée en code (Three.js) d'après deux photos, rendue en MP4 vertical",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --format=iife --outfile=dist/app.js --minify",
+    "build:artifact": "esbuild src/main.js --bundle --format=iife --outfile=dist/app.artifact.js --minify",
+    "serve": "python3 -m http.server 8765 --bind 127.0.0.1",
+    "stills": "node render.mjs --w=1080 --h=1920 --times=1,6.5,9.7,12,16.4,21.5 --out=stills --fmt=png",
+    "frames": "node render.mjs --w=1080 --h=1920 --fps=24 --dur=22 --out=frames"
+  },
+  "dependencies": {
+    "three": "0.160.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0",
+    "playwright-core": "1.50.0"
+  }
+}

@@ -1,0 +1,187 @@
+<title>Visite Villa 3D</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap">
+<style>
+  :root{
+    --ink:#333333; --paper:#FFFFFF; --accent:#FFD700;
+    --grey-1:#F2F2F2; --grey-2:#BFBFBF; --grey-3:#6B6B6B;
+    --scrim:rgba(51,51,51,.86); --scrim-soft:rgba(51,51,51,.62);
+    --line:rgba(255,255,255,.16);
+    --font:"Open Sans",system-ui,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+  html,body{height:100%}
+  body{margin:0;background:var(--ink);color:var(--paper);font-family:var(--font);overflow:hidden;-webkit-font-smoothing:antialiased}
+  canvas{position:fixed;left:0;top:0;z-index:0;display:block}
+  #ui{position:fixed;inset:0;z-index:2;pointer-events:none;font-family:var(--font)}
+  #ui > *{pointer-events:auto}
+  button{font-family:var(--font);cursor:pointer}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .brand{position:absolute;left:20px;top:18px;padding:12px 16px 13px;background:var(--scrim);border-left:3px solid var(--accent);max-width:min(340px,calc(100vw - 96px))}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 4px}
+  .brand h1{font-size:20px;font-weight:300;letter-spacing:.02em;margin:0;line-height:1.2;text-wrap:balance}
+  .brand p{margin:5px 0 0;font-size:12.5px;color:var(--grey-2);line-height:1.4}
+
+  .help-btn{position:absolute;right:20px;top:18px;width:40px;height:40px;border:1px solid var(--line);background:var(--scrim);color:var(--paper);font-size:16px;font-weight:600;border-radius:50%}
+  .help-btn[aria-expanded="true"]{background:var(--accent);color:var(--ink);border-color:var(--accent)}
+  #help{position:absolute;right:20px;top:68px;width:min(360px,calc(100vw - 40px));max-height:calc(100vh - 170px);overflow:auto;background:var(--paper);color:var(--ink);padding:18px 20px 16px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+  #help h2{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid var(--accent);display:inline-block}
+  #help h2+*{margin-top:0}
+  #help p,#help li{font-size:13.5px;line-height:1.5;color:var(--ink)}
+  #help p{margin:0 0 12px}
+  #help ul{margin:0 0 14px;padding-left:18px}
+  #help dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0 0 14px;font-size:13px}
+  #help dt{font-weight:700;white-space:nowrap}
+  #help dd{margin:0;color:var(--grey-3)}
+  #help .kbd{display:inline-block;font-size:11.5px;font-weight:600;padding:1px 6px;border:1px solid var(--grey-2);border-radius:4px;background:var(--grey-1);color:var(--ink)}
+
+  .hint{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);padding:8px 14px;background:var(--scrim-soft);color:var(--paper);font-size:12.5px;white-space:nowrap}
+
+  .bar{position:absolute;left:0;right:0;bottom:0;background:var(--scrim);padding:10px 16px 12px;display:grid;grid-template-columns:auto 1fr auto auto auto;grid-template-areas:"chips chips chips chips chips" "play line time modes fs";align-items:center;gap:10px 14px}
+  .chips{grid-area:chips;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--grey-2);background:transparent;border:1px solid var(--line);padding:5px 10px;border-radius:999px}
+  .chip:hover{color:var(--paper);border-color:rgba(255,255,255,.4)}
+  .chip.on{background:var(--accent);color:var(--ink);border-color:var(--accent)}
+  .icon-btn{width:40px;height:40px;border:1px solid var(--line);background:transparent;color:var(--paper);display:grid;place-items:center;border-radius:6px}
+  .icon-btn:hover{border-color:rgba(255,255,255,.45)}
+  .icon-btn svg{width:18px;height:18px;fill:currentColor}
+  #play{grid-area:play;background:var(--accent);color:var(--ink);border-color:var(--accent)}
+  .timeline{grid-area:line;display:flex;align-items:center;min-width:0}
+  input[type=range]{--p:0%;-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0}
+  input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--accent) var(--p),rgba(255,255,255,.22) var(--p))}
+  input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:rgba(255,255,255,.22)}
+  input[type=range]::-moz-range-progress{height:4px;border-radius:2px;background:var(--accent)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--paper);border:2px solid var(--ink);margin-top:-5px;box-shadow:0 0 0 1px rgba(255,255,255,.4)}
+  input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--paper);border:2px solid var(--ink)}
+  .time{grid-area:time;font-variant-numeric:tabular-nums;font-size:13px;color:var(--paper);white-space:nowrap}
+  .time .sep{color:var(--grey-2);margin:0 4px}
+  .modes{grid-area:modes;display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .modes button{border:0;background:transparent;color:var(--grey-2);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:0 12px;height:38px}
+  .modes button.on{background:var(--paper);color:var(--ink)}
+  #fs{grid-area:fs}
+
+  #loader{position:fixed;inset:0;z-index:3;background:var(--ink);display:grid;place-items:center;text-align:center}
+  #loader .spin{width:44px;height:44px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:var(--accent);animation:spin 1s linear infinite;margin:0 auto 14px}
+  #loader p{margin:0;font-size:13.5px;color:var(--grey-2)}
+  #loader .eyebrow{margin-bottom:10px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){#loader .spin{animation:none;border-top-color:var(--accent)}}
+
+  @media (max-width:720px){
+    .brand{left:12px;top:12px;padding:9px 12px 10px}
+    .brand h1{font-size:16px}
+    .brand p{display:none}
+    .help-btn{right:12px;top:12px}
+    #help{right:12px;top:60px}
+    .bar{padding:8px 10px 10px;gap:8px 10px;grid-template-columns:auto 1fr auto auto;grid-template-areas:"chips chips chips chips" "play line time fs" "modes modes modes modes"}
+    .modes{justify-content:stretch}
+    .modes button{flex:1;height:34px}
+    .hint{bottom:150px;font-size:12px;white-space:normal;text-align:center;max-width:80vw}
+  }
+</style>
+
+<div id="ui">
+  <header class="brand">
+    <p class="eyebrow">Digital 84 · démo 3D</p>
+    <h1>Visite Villa 3D</h1>
+    <p>Scène construite en code d'après deux photos : façade de nuit et salon. Aucun modèle ni texture téléchargé.</p>
+  </header>
+
+  <button class="help-btn" id="helpBtn" aria-expanded="false" aria-controls="help" aria-label="Aide">?</button>
+  <aside id="help" hidden>
+    <h2>Comment c'est fait</h2>
+    <p>Les volumes, les meubles, les textures (marbre, travertin, toile de Jouy, palmiers des coussins) et l'éclairage sont générés par du code Three.js au chargement de la page. La caméra suit un chemin de 22 secondes : jardin, piscine, terrasse, puis salon, salle à manger et coin lounge.</p>
+    <h2>Commandes</h2>
+    <dl>
+      <dt>Visite</dt><dd>lecture du plan caméra, en boucle</dd>
+      <dt>Libre</dt><dd>glisser pour tourner, molette pour zoomer, clic droit pour déplacer</dd>
+      <dt><span class="kbd">Espace</span></dt><dd>lecture / pause</dd>
+      <dt><span class="kbd">←</span> <span class="kbd">→</span></dt><dd>reculer / avancer d'une seconde</dd>
+      <dt><span class="kbd">F</span></dt><dd>plein écran</dd>
+    </dl>
+    <h2>Limites</h2>
+    <ul>
+      <li>Les dimensions sont estimées à partir des photos, pas mesurées.</li>
+      <li>Le rendu est temps réel : sur mobile, la qualité est réduite automatiquement.</li>
+    </ul>
+  </aside>
+
+  <div class="hint" id="hint" hidden>Glisser pour tourner · molette pour zoomer · clic droit pour déplacer</div>
+
+  <div class="bar">
+    <div class="chips" id="chips">
+      <button class="chip on" data-t="0">Extérieur</button>
+      <button class="chip" data-t="3.5">Piscine</button>
+      <button class="chip" data-t="7">Terrasse</button>
+      <button class="chip" data-t="9.7">Entrée</button>
+      <button class="chip" data-t="12">Salon</button>
+      <button class="chip" data-t="16.4">Salle à manger</button>
+      <button class="chip" data-t="20.3">Lounge</button>
+    </div>
+    <button class="icon-btn" id="play" aria-label="Pause">
+      <svg id="icPause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+      <svg id="icPlay" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M7 4l13 8-13 8z"/></svg>
+    </button>
+    <div class="timeline"><input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Position dans la visite"></div>
+    <div class="time"><span id="tc">0:00</span><span class="sep">/</span><span>0:22</span></div>
+    <div class="modes" role="group" aria-label="Mode de caméra">
+      <button id="mVisite" class="on" aria-pressed="true">Visite</button>
+      <button id="mLibre" aria-pressed="false">Libre</button>
+    </div>
+    <button class="icon-btn" id="fs" aria-label="Plein écran">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v2H6v4H4zm10 0h6v6h-2V6h-4zM4 14h2v4h4v2H4zm14 0h2v6h-6v-2h4z"/></svg>
+    </button>
+  </div>
+</div>
+
+<div id="loader" role="status" aria-live="polite">
+  <div>
+    <p class="eyebrow">Digital 84 · démo 3D</p>
+    <div class="spin"></div>
+    <p>Construction de la scène 3D…</p>
+  </div>
+</div>
+
+<script>window.__startVilla=function(){
+/*__BUNDLE__*/
+};</script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const loader=$('#loader'),play=$('#play'),icPlay=$('#icPlay'),icPause=$('#icPause'),scrub=$('#scrub'),tc=$('#tc');
+  const chips=[...document.querySelectorAll('.chip')],mVisite=$('#mVisite'),mLibre=$('#mLibre'),hint=$('#hint'),fsBtn=$('#fs'),helpBtn=$('#helpBtn'),help=$('#help');
+  const DUR=22;let reduced=false;try{reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){}
+  const fmt=s=>{s=Math.max(0,Math.min(DUR,s));return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');};
+  function setPlayIcon(playing){icPlay.hidden=playing;icPause.hidden=!playing;play.setAttribute('aria-label',playing?'Pause':'Lecture');}
+  function setModeUI(m){const free=m==='free';mLibre.classList.toggle('on',free);mVisite.classList.toggle('on',!free);mLibre.setAttribute('aria-pressed',String(free));mVisite.setAttribute('aria-pressed',String(!free));hint.hidden=!free;}
+  function updateChips(sec){let idx=0;chips.forEach((c,i)=>{if(sec+0.05>=+c.dataset.t)idx=i;});chips.forEach((c,i)=>c.classList.toggle('on',i===idx));}
+  function fail(msg){loader.querySelector('.spin').hidden=true;loader.querySelector('p:last-child').textContent=msg;}
+  function start(){
+    try{window.__startVilla();}catch(e){fail('La 3D ne démarre pas sur cet appareil : '+e.message);return;}
+    const t0=Date.now();
+    (function wait(){const api=window.__villa;if(api&&api.ready){init(api);}else if(Date.now()-t0>30000){fail('Le chargement prend trop de temps. Réessayez sur un navigateur récent.');}else setTimeout(wait,60);})();
+  }
+  function init(api){
+    loader.hidden=true;if(reduced)api.pause();setPlayIcon(api.isPlaying());
+    let scrubbing=false,wasPlaying=false;
+    api.onFrame=u=>{if(!scrubbing){scrub.value=Math.round(u*1000);scrub.style.setProperty('--p',(u*100)+'%');}tc.textContent=fmt(u*DUR);updateChips(u*DUR);};
+    play.addEventListener('click',()=>{if(api.mode==='free'){api.play();setModeUI('play');}else api.toggle();setPlayIcon(api.isPlaying());});
+    scrub.addEventListener('pointerdown',()=>{scrubbing=true;wasPlaying=api.isPlaying();});
+    scrub.addEventListener('input',()=>{const u=scrub.value/1000;api.seek(u);scrub.style.setProperty('--p',(u*100)+'%');setModeUI('play');setPlayIcon(false);});
+    scrub.addEventListener('change',()=>{scrubbing=false;if(wasPlaying&&!reduced)api.play();setPlayIcon(api.isPlaying());});
+    chips.forEach(c=>c.addEventListener('click',()=>{api.chapter(+c.dataset.t);setModeUI('play');setPlayIcon(true);}));
+    mVisite.addEventListener('click',()=>{api.play();setModeUI('play');setPlayIcon(true);});
+    mLibre.addEventListener('click',()=>{api.setMode('free');setModeUI('free');setPlayIcon(false);});
+    fsBtn.addEventListener('click',()=>{if(document.fullscreenElement)document.exitFullscreen();else if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen();});
+    helpBtn.addEventListener('click',()=>{const open=help.hidden;help.hidden=!open;helpBtn.setAttribute('aria-expanded',String(open));});
+    document.addEventListener('keydown',e=>{
+      if(e.key===' '&&e.target!==scrub){e.preventDefault();play.click();}
+      else if(e.key==='ArrowRight'&&e.target!==scrub){api.seek(Math.min(1,api.time+1/DUR));api.play();setModeUI('play');setPlayIcon(true);}
+      else if(e.key==='ArrowLeft'&&e.target!==scrub){api.seek(Math.max(0,api.time-1/DUR));api.play();setModeUI('play');setPlayIcon(true);}
+      else if(e.key==='f'||e.key==='F'){fsBtn.click();}
+      else if(e.key==='Escape'&&!help.hidden){help.hidden=true;helpBtn.setAttribute('aria-expanded','false');}
+    });
+  }
+  requestAnimationFrame(()=>setTimeout(start,30));
+})();
+</script>
