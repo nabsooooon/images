@@ -1,0 +1,13 @@
+{
+  "name": "kpi-dashboard-bip-max",
+  "version": "1.0.0",
+  "description": "Dashboard KPI Digital 84 pour Amazfit Bip Max (Zepp OS)",
+  "main": "app.js",
+  "private": true,
+  "devDependencies": {
+    "@zeppos/device-types": "^3.0.0"
+  },
+  "dependencies": {
+    "@zeppos/zml": "^0.0.38"
+  }
+}

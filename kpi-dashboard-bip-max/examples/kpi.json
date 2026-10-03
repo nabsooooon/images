@@ -1,0 +1,11 @@
+{
+  "title": "Digital 84",
+  "updatedAt": "03/10 · 09:30",
+  "kpis": [
+    { "label": "CA du mois", "value": 48250, "unit": "€", "target": 60000, "trend": 12 },
+    { "label": "Leads", "value": 184, "target": 200, "trend": 8 },
+    { "label": "Taux de conversion", "value": 3.4, "unit": "%", "target": 4, "trend": -0.3 },
+    { "label": "Visites site", "value": 12430, "target": 15000, "trend": 21 },
+    { "label": "Tickets ouverts", "value": 7, "trend": -2, "trendUnit": "" }
+  ]
+}

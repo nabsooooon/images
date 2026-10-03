@@ -1,0 +1,53 @@
+{
+  "configVersion": "v3",
+  "app": {
+    "appId": 1084084,
+    "appName": "KPI Digital 84",
+    "appType": "app",
+    "version": {
+      "code": 1,
+      "name": "1.0.0"
+    },
+    "icon": "icon.png",
+    "vender": "digital84",
+    "description": "Dashboard KPI Digital 84 sur Amazfit Bip Max"
+  },
+  "permissions": ["data:os.device.info", "device:os.local_storage"],
+  "runtime": {
+    "apiVersion": {
+      "compatible": "3.0",
+      "target": "3.0",
+      "minVersion": "3.0"
+    }
+  },
+  "targets": {
+    "common": {
+      "module": {
+        "page": {
+          "pages": ["page/index"]
+        },
+        "app-side": {
+          "path": "app-side/index"
+        },
+        "setting": {
+          "path": "setting/index"
+        }
+      },
+      "platforms": [
+        {
+          "st": "s",
+          "dw": 432
+        }
+      ]
+    }
+  },
+  "i18n": {
+    "fr-FR": {
+      "appName": "KPI Digital 84"
+    },
+    "en-US": {
+      "appName": "KPI Digital 84"
+    }
+  },
+  "defaultLanguage": "fr-FR"
+}
