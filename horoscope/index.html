@@ -1,0 +1,1114 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ciel en Direct</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Le ciel recalculé en continu et un horoscope pour chaque signe, mis à jour toutes les heures.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols&family=Open+Sans:wght@400;600;700;800&display=swap">
+<style>
+/* Layout : bandeau nuit (carte du ciel + éphémérides) puis cahier clair (lectures par signe), une seule direction visuelle assumée. */
+:root {
+  --ink: #333333;        /* texte sur fond clair */
+  --night: #1C1C1C;      /* fond de page */
+  --night-2: #262626;    /* panneaux */
+  --night-3: #333333;    /* contrôles */
+  --line: #474747;       /* filets sur fond nuit */
+  --mist: #B5B5B5;       /* texte secondaire sur fond nuit */
+  --white: #FFFFFF;
+  --sun: #FFD700;        /* accent unique */
+  --paper: #F0F0F0;      /* fond du cahier */
+  --rule: #DEDEDE;       /* filets sur fond clair */
+  --track: #E3E3E3;      /* rail des jauges */
+  --font: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --sym: "Noto Sans Symbols", "Segoe UI Symbol", "Apple Symbols", "DejaVu Sans", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--night); }
+body {
+  margin: 0; background: var(--night); color: var(--white);
+  font-family: var(--font); font-size: 15px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.inner {
+  max-width: 1240px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.sym { font-family: var(--sym); font-variant-emoji: text; }
+h1, h2, h3 { text-wrap: balance; }
+button { font-family: var(--font); cursor: pointer; }
+button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
+
+/* ---------- En-tête ---------- */
+.top .inner { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 28px; padding-block: 18px 10px; }
+.brand { display: flex; align-items: center; gap: 12px; margin-right: auto; }
+.brand-mark {
+  width: 42px; height: 42px; border-radius: 50%; background: var(--sun); color: var(--ink);
+  display: grid; place-items: center; font-size: 24px; line-height: 1;
+}
+.brand h1 { margin: 0; font-size: 1.3rem; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
+.brand p { margin: 0; color: var(--mist); font-size: 0.82rem; }
+.clock { display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; }
+.clock-state { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mist); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--mist); }
+.is-live .dot { background: var(--sun); box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.6); animation: pulse 2s infinite; }
+.is-live .clock-state { color: var(--sun); }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.55); } 70% { box-shadow: 0 0 0 9px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
+.clock-time { font-size: 1.55rem; font-weight: 700; line-height: 1.2; }
+.clock-meta { font-size: 0.78rem; color: var(--mist); }
+.city { display: flex; flex-direction: column; gap: 3px; }
+.city label, .eyebrow { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mist); }
+select {
+  background: var(--night-3); color: var(--white); border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 10px; font: 600 0.9rem var(--font);
+}
+
+/* ---------- Ciel ---------- */
+.sky .inner {
+  display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 28px 40px; padding-block: 10px 52px; align-items: start;
+}
+.wheel-col { min-width: 0; }
+.wheel-wrap { position: relative; width: 100%; max-width: 680px; margin-inline: auto; }
+#wheel { display: block; width: 100%; aspect-ratio: 1; max-width: 100%; touch-action: manipulation; }
+.tip {
+  position: absolute; pointer-events: none; background: var(--white); color: var(--ink);
+  border-radius: 8px; padding: 8px 10px; font-size: 0.8rem; line-height: 1.4; min-width: 150px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); transform: translate(-50%, calc(-100% - 14px));
+  font-variant-numeric: tabular-nums;
+}
+.tip strong { display: block; font-size: 0.88rem; }
+.legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; margin-top: 12px; font-size: 0.78rem; color: var(--mist); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.lg-line { width: 22px; height: 0; border-top: 2px solid var(--sun); }
+.lg-dash { width: 22px; height: 0; border-top: 2px dashed var(--white); }
+.lg-shade { width: 14px; height: 14px; border-radius: 3px; background: #121212; border: 1px solid var(--line); }
+
+.panel { min-width: 0; display: flex; flex-direction: column; gap: 22px; }
+.panel h2 { margin: 0 0 4px; font-size: 1.55rem; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
+.panel .lede { margin: 0; color: var(--mist); max-width: 52ch; }
+.block { background: var(--night-2); border-radius: 14px; padding: 16px 18px; }
+.block-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.controls .sep { width: 1px; background: var(--line); margin-inline: 2px; }
+.ctl {
+  background: var(--night-3); color: var(--white); border: 1px solid var(--line); border-radius: 999px;
+  padding: 6px 13px; font-size: 0.8rem; font-weight: 600;
+}
+.ctl:hover { border-color: var(--mist); }
+.ctl[aria-pressed="true"] { background: var(--sun); color: var(--ink); border-color: var(--sun); }
+.moon { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
+#moonIcon { width: 54px; height: 54px; }
+.moon-name { font-weight: 700; font-size: 1rem; }
+.moon-meta { color: var(--mist); font-size: 0.84rem; font-variant-numeric: tabular-nums; }
+
+table.pos { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.88rem; }
+table.pos td { padding: 6px 4px; border-bottom: 1px solid #333333; vertical-align: middle; }
+table.pos tr:last-child td { border-bottom: 0; }
+table.pos .g { width: 26px; color: var(--sun); font-size: 1.05rem; text-align: center; }
+table.pos .n { font-weight: 600; }
+table.pos .s { color: var(--white); white-space: nowrap; }
+table.pos .s .sym { color: var(--sun); margin-right: 4px; }
+table.pos .d { text-align: right; white-space: nowrap; }
+table.pos .r { width: 30px; text-align: right; }
+table.pos tr.angle td { color: var(--mist); }
+.badge { display: inline-block; background: #4F4F4F; color: var(--white); border-radius: 4px; font-size: 0.68rem; font-weight: 700; padding: 1px 5px; letter-spacing: 0.04em; }
+.events { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.events li { display: grid; grid-template-columns: 92px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px solid #333333; font-size: 0.88rem; }
+.events li:last-child { border-bottom: 0; }
+.events time { color: var(--mist); font-variant-numeric: tabular-nums; }
+.events .sym { color: var(--sun); }
+.small { font-size: 0.8rem; color: var(--mist); margin: 8px 0 0; }
+
+/* ---------- Cahier clair ---------- */
+.readings { background: var(--paper); color: var(--ink); }
+.readings .inner { padding-block: 52px 60px; display: flex; flex-direction: column; gap: 22px; }
+.readings h2 { margin: 0; font-size: 1.7rem; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
+.readings .eyebrow { color: var(--ink); }
+.sec-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px; }
+.sec-head p { margin: 0; max-width: 60ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; background: var(--white); color: var(--ink);
+  border: 1px solid var(--rule); border-radius: 999px; padding: 6px 12px 6px 9px; font-size: 0.84rem; font-weight: 600;
+}
+.chip .sym { font-size: 1rem; }
+.chip:hover { border-color: var(--ink); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--white); border-color: var(--ink); }
+.chip[aria-pressed="true"] .sym { color: var(--sun); }
+
+.detail { background: var(--white); border-radius: 16px; padding: 24px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 28px 36px; }
+.d-head { grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center; padding-bottom: 18px; border-bottom: 1px solid var(--rule); }
+.d-glyph { width: 64px; height: 64px; border-radius: 50%; background: var(--sun); color: var(--ink); display: grid; place-items: center; font-size: 34px; line-height: 1; }
+.d-head h3 { margin: 0; font-size: 1.6rem; font-weight: 800; line-height: 1.15; }
+.d-head p { margin: 2px 0 0; }
+.d-climate { font-weight: 600; }
+.total { background: var(--ink); color: var(--white); border-radius: 12px; padding: 8px 14px; text-align: center; font-variant-numeric: tabular-nums; }
+.total b { display: block; font-size: 1.7rem; line-height: 1.1; }
+.total span { font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.d-texts { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.rd-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.rd-head h4 { margin: 0; font-size: 1.02rem; font-weight: 800; }
+.pill { background: var(--ink); color: var(--white); border-radius: 999px; font-size: 0.7rem; font-weight: 700; padding: 2px 9px; letter-spacing: 0.03em; }
+.rd-score { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rd p { margin: 0; }
+.rd .why { font-size: 0.9rem; margin-top: 4px; }
+.rd .why b, .rd .adv b { font-weight: 700; }
+.rd .adv { font-size: 0.9rem; }
+.d-curves { min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.d-curves h4 { margin: 0; font-size: 1.02rem; font-weight: 800; }
+.d-curves > p { margin: 0 0 4px; font-size: 0.88rem; }
+.curve-row { display: flex; flex-direction: column; gap: 2px; }
+.curve-top { display: flex; justify-content: space-between; gap: 8px; font-size: 0.84rem; font-variant-numeric: tabular-nums; }
+.curve-top b { font-weight: 700; }
+.curve-row svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(262px, 1fr)); gap: 14px; }
+.card {
+  background: var(--white); color: var(--ink); border: 1px solid var(--rule); border-radius: 14px;
+  padding: 16px 16px 14px; display: flex; flex-direction: column; gap: 10px; cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.card:hover { border-color: #9A9A9A; transform: translateY(-2px); }
+.card.is-sel { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.c-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 11px; align-items: center; }
+.c-glyph { width: 40px; height: 40px; border-radius: 50%; background: var(--sun); color: var(--ink); display: grid; place-items: center; font-size: 21px; line-height: 1; }
+.c-head h3 { margin: 0; font-size: 1.05rem; font-weight: 800; line-height: 1.2; }
+.c-head p { margin: 0; font-size: 0.76rem; }
+.c-total { background: var(--ink); color: var(--white); border-radius: 8px; padding: 3px 9px; font-weight: 800; font-size: 1rem; font-variant-numeric: tabular-nums; min-width: 42px; text-align: center; }
+.c-climate { margin: 0; font-size: 0.82rem; min-height: 2.6em; }
+.c-themes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.c-themes li { display: grid; grid-template-columns: 70px minmax(0, 1fr) 26px 12px; gap: 8px; align-items: center; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.c-themes .lbl { font-weight: 600; }
+.bar { height: 7px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 50%; border-radius: 4px; background: var(--sun); transition: width 0.6s ease; }
+.c-themes .v { text-align: right; font-weight: 700; }
+.c-themes .tr { font-size: 0.62rem; text-align: center; }
+
+/* ---------- Méthode ---------- */
+.method .inner { padding-block: 48px 30px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 36px; }
+.method h2 { grid-column: 1 / -1; margin: 0; font-size: 1.4rem; font-weight: 800; }
+.method h3 { margin: 0 0 6px; font-size: 1rem; font-weight: 700; color: var(--sun); }
+.method p { margin: 0; color: var(--mist); font-size: 0.9rem; max-width: 60ch; }
+.foot .inner { padding-block: 20px 34px; border-top: 1px solid #2E2E2E; color: var(--mist); font-size: 0.78rem; display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
+.foot a { color: var(--white); }
+
+.fatal { background: var(--sun); color: var(--ink); padding: 14px 18px; border-radius: 12px; font-weight: 600; }
+
+@media (max-width: 960px) {
+  .sky .inner { grid-template-columns: minmax(0, 1fr); }
+  .detail { grid-template-columns: minmax(0, 1fr); }
+  .method .inner { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .clock { align-items: flex-start; }
+  .detail { padding: 18px 16px; }
+  .d-head { grid-template-columns: auto minmax(0, 1fr); }
+  .d-head .total { grid-column: 1 / -1; justify-self: start; display: flex; gap: 8px; align-items: baseline; }
+  .events li { grid-template-columns: 78px 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .is-live .dot { animation: none; }
+  .bar i, .card { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="top" id="top">
+  <div class="inner">
+    <div class="brand">
+      <div class="brand-mark sym" aria-hidden="true">☉&#xFE0E;</div>
+      <div>
+        <h1>Ciel en Direct</h1>
+        <p>Le zodiaque recalculé en continu, un horoscope par heure</p>
+      </div>
+    </div>
+    <div class="city">
+      <label for="city">Lieu d’observation</label>
+      <select id="city"></select>
+    </div>
+    <div class="clock is-live" id="clock">
+      <div class="clock-state"><span class="dot"></span><span id="clockState">En direct</span></div>
+      <div class="clock-time" id="clockTime">--:--:--</div>
+      <div class="clock-meta" id="clockMeta">Chargement du ciel…</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="sky" aria-labelledby="skyTitle">
+    <div class="inner">
+      <div class="wheel-col">
+        <div class="wheel-wrap" id="wheelWrap">
+          <canvas id="wheel" role="img" aria-label="Carte du zodiaque avec la position actuelle du Soleil, de la Lune et des planètes"></canvas>
+          <div class="tip" id="tip" hidden></div>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span><i class="lg-line"></i>Harmonie (trigone, sextile)</span>
+          <span><i class="lg-dash"></i>Tension (carré, opposition)</span>
+          <span><i class="lg-shade"></i>Sous l’horizon</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div>
+          <h2 id="skyTitle">Le ciel en ce moment</h2>
+          <p class="lede">La roue tourne avec la Terre : l’ascendant, à gauche, change de signe toutes les deux heures environ. Accélérez le temps pour voir les planètes avancer.</p>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><span class="eyebrow">Vitesse du temps</span></div>
+          <div class="controls" id="controls">
+            <button class="ctl" data-mode="live" aria-pressed="true">Direct</button>
+            <button class="ctl" data-mode="pause" aria-pressed="false">Pause</button>
+            <span class="sep" aria-hidden="true"></span>
+            <button class="ctl" data-speed="60" aria-pressed="false">1 min/s</button>
+            <button class="ctl" data-speed="3600" aria-pressed="false">1 h/s</button>
+            <button class="ctl" data-speed="86400" aria-pressed="false">1 jour/s</button>
+            <span class="sep" aria-hidden="true"></span>
+            <button class="ctl" data-step="-1" aria-pressed="false">−1 h</button>
+            <button class="ctl" data-step="1" aria-pressed="false">+1 h</button>
+          </div>
+        </div>
+
+        <div class="block moon">
+          <canvas id="moonIcon" width="108" height="108" aria-hidden="true"></canvas>
+          <div>
+            <div class="moon-name" id="moonName">Lune</div>
+            <div class="moon-meta" id="moonMeta"></div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><span class="eyebrow">Positions</span><span class="eyebrow" id="posNote">Zodiaque tropical</span></div>
+          <table class="pos"><tbody id="posBody"></tbody></table>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><span class="eyebrow">À venir</span></div>
+          <ul class="events" id="events"></ul>
+          <p class="small" id="ascNext"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="readings" aria-labelledby="readTitle">
+    <div class="inner">
+      <div class="sec-head">
+        <div>
+          <span class="eyebrow" id="editionLabel">Édition</span>
+          <h2 id="readTitle">Votre horoscope de l’heure</h2>
+        </div>
+        <p>Les jauges bougent avec le ciel. Les textes sont réécrits à chaque heure ronde, d’après les planètes qui touchent votre signe.</p>
+      </div>
+      <div class="chips" id="chips" role="group" aria-label="Choisir un signe"></div>
+      <article class="detail" id="detail" aria-live="polite"></article>
+
+      <div class="sec-head" style="margin-top:18px">
+        <div>
+          <span class="eyebrow">Les 12 signes</span>
+          <h2>Le baromètre en direct</h2>
+        </div>
+        <p>Flèche : évolution par rapport à l’heure précédente. Touchez une carte pour lire l’horoscope complet.</p>
+      </div>
+      <div class="cards" id="cards"></div>
+    </div>
+  </section>
+
+  <section class="method" aria-labelledby="methodTitle">
+    <div class="inner">
+      <h2 id="methodTitle">Comment c’est calculé</h2>
+      <div>
+        <h3>Des positions réelles</h3>
+        <p>Le Soleil, la Lune et les huit planètes sont calculés dans votre navigateur avec la bibliothèque Astronomy Engine, à la minute d’arc près, dans le zodiaque tropical. L’ascendant et le milieu du ciel dépendent du lieu choisi.</p>
+      </div>
+      <div>
+        <h3>Une édition par heure</h3>
+        <p>Chaque signe reçoit des maisons solaires et des aspects. Vénus et la Lune pèsent sur l’amour, Jupiter sur l’argent, Saturne et Mercure sur le travail, le Soleil sur la réussite, Mars sur la forme. La Lune et l’ascendant font varier les scores d’heure en heure.</p>
+      </div>
+      <div>
+        <h3>À lire pour le plaisir</h3>
+        <p>Le ciel est exact, l’interprétation est un jeu. Aucune étude n’a montré que les astres prédisent l’amour, l’argent ou la réussite. Prenez ces lignes comme une météo de bonne humeur.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="inner">
+    <span>Ciel en Direct · calculs astronomiques : Astronomy Engine (licence MIT)</span>
+    <span>Heures affichées dans le fuseau de votre appareil</span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  var A = window.Astronomy;
+  var VS = "︎";
+  function $(id) { return document.getElementById(id); }
+
+  if (!A) {
+    $("detail").innerHTML = '<p class="fatal">Le module de calcul astronomique n’a pas pu se charger. Vérifiez votre connexion puis rechargez la page.</p>';
+    $("clockMeta").textContent = "Calcul indisponible";
+    return;
+  }
+
+  /* ================= Données ================= */
+  var SIGNS = [
+    { slug: "belier", name: "Bélier", art: "le Bélier", g: "♈", dates: "21 mars – 19 avril" },
+    { slug: "taureau", name: "Taureau", art: "le Taureau", g: "♉", dates: "20 avril – 20 mai" },
+    { slug: "gemeaux", name: "Gémeaux", art: "les Gémeaux", g: "♊", dates: "21 mai – 20 juin" },
+    { slug: "cancer", name: "Cancer", art: "le Cancer", g: "♋", dates: "21 juin – 22 juillet" },
+    { slug: "lion", name: "Lion", art: "le Lion", g: "♌", dates: "23 juillet – 22 août" },
+    { slug: "vierge", name: "Vierge", art: "la Vierge", g: "♍", dates: "23 août – 22 septembre" },
+    { slug: "balance", name: "Balance", art: "la Balance", g: "♎", dates: "23 septembre – 22 octobre" },
+    { slug: "scorpion", name: "Scorpion", art: "le Scorpion", g: "♏", dates: "23 octobre – 21 novembre" },
+    { slug: "sagittaire", name: "Sagittaire", art: "le Sagittaire", g: "♐", dates: "22 novembre – 21 décembre" },
+    { slug: "capricorne", name: "Capricorne", art: "le Capricorne", g: "♑", dates: "22 décembre – 19 janvier" },
+    { slug: "verseau", name: "Verseau", art: "le Verseau", g: "♒", dates: "20 janvier – 18 février" },
+    { slug: "poissons", name: "Poissons", art: "les Poissons", g: "♓", dates: "19 février – 20 mars" }
+  ];
+  var PLANETS = [
+    { id: "Sun", name: "Soleil", g: "☉" },
+    { id: "Moon", name: "Lune", g: "☽" },
+    { id: "Mercury", name: "Mercure", g: "☿" },
+    { id: "Venus", name: "Vénus", g: "♀" },
+    { id: "Mars", name: "Mars", g: "♂" },
+    { id: "Jupiter", name: "Jupiter", g: "♃" },
+    { id: "Saturn", name: "Saturne", g: "♄" },
+    { id: "Uranus", name: "Uranus", g: "♅" },
+    { id: "Neptune", name: "Neptune", g: "♆" },
+    { id: "Pluto", name: "Pluton", g: "♇" }
+  ];
+  var PL = {}; PLANETS.forEach(function (p) { PL[p.id] = p; });
+
+  var CITIES = [
+    { n: "Avignon", lat: 43.9493, lon: 4.8055 },
+    { n: "Paris", lat: 48.8566, lon: 2.3522 },
+    { n: "Marseille", lat: 43.2965, lon: 5.3698 },
+    { n: "Lyon", lat: 45.764, lon: 4.8357 },
+    { n: "Toulouse", lat: 43.6047, lon: 1.4442 },
+    { n: "Bordeaux", lat: 44.8378, lon: -0.5792 },
+    { n: "Nantes", lat: 47.2184, lon: -1.5536 },
+    { n: "Lille", lat: 50.6292, lon: 3.0573 },
+    { n: "Strasbourg", lat: 48.5734, lon: 7.7521 },
+    { n: "Nice", lat: 43.7102, lon: 7.262 },
+    { n: "Bruxelles", lat: 50.8503, lon: 4.3517 },
+    { n: "Genève", lat: 46.2044, lon: 6.1432 },
+    { n: "Casablanca", lat: 33.5731, lon: -7.5898 },
+    { n: "Dakar", lat: 14.7167, lon: -17.4677 },
+    { n: "Montréal", lat: 45.5019, lon: -73.5674 }
+  ];
+
+  var ASPECTS = [
+    { a: 0, n: "conjonction", un: "une", g: "☌" },
+    { a: 60, n: "sextile", un: "un", g: "⚹", v: 0.6 },
+    { a: 90, n: "carré", un: "un", g: "□", v: -0.8 },
+    { a: 120, n: "trigone", un: "un", g: "△", v: 1 },
+    { a: 180, n: "opposition", un: "une", g: "☍", v: -0.7 }
+  ];
+  var ASC_V = { 0: 1, 60: 0.5, 90: -0.6, 120: 0.8, 180: -0.4 };
+  var NATURE = { Sun: 0.5, Moon: 0.3, Mercury: 0.2, Venus: 1, Mars: -0.4, Jupiter: 1, Saturn: -0.6, Uranus: -0.2, Neptune: -0.1, Pluto: -0.3 };
+
+  var THEMES = [
+    { key: "amour", name: "Amour", w: { Venus: 1, Moon: 0.8, Mars: 0.5, Sun: 0.3 }, houses: [5, 7], retro: { Venus: -0.45 }, asc: 0.3 },
+    { key: "argent", name: "Argent", w: { Jupiter: 1, Venus: 0.7, Moon: 0.5, Saturn: 0.5 }, houses: [2, 8], retro: { Mercury: -0.25, Venus: -0.25 }, asc: 0.25 },
+    { key: "travail", name: "Travail", w: { Saturn: 0.9, Mercury: 0.9, Mars: 0.6, Moon: 0.5 }, houses: [6, 10], retro: { Mercury: -0.45, Mars: -0.2 }, asc: 0.35 },
+    { key: "reussite", name: "Réussite", w: { Sun: 1, Jupiter: 0.8, Mars: 0.4, Moon: 0.5 }, houses: [10, 11], retro: { Jupiter: -0.2 }, asc: 0.6 },
+    { key: "forme", name: "Forme", w: { Mars: 1, Sun: 0.7, Moon: 0.7 }, houses: [1, 6], retro: { Mars: -0.35 }, asc: 0.6 }
+  ];
+  var LEVELS = ["Tendu", "Fragile", "Stable", "Porteur", "Au top"];
+
+  var HOUSE_TOPIC = [null, "de la personnalité", "de l’argent", "des échanges", "du foyer", "des amours et des plaisirs", "du quotidien et de la santé", "du couple et des associations", "des transformations", "des voyages et des grands projets", "de la carrière", "des amitiés et des réseaux", "du repos et des coulisses"];
+  var MOON_HOUSE = [null,
+    "La Lune est dans votre signe : émotions à fleur de peau, intuition aiguisée.",
+    "La Lune traverse votre maison 2 : besoin de sécurité, gare aux achats réconfort.",
+    "La Lune anime votre maison 3 : messages, appels et petits trajets.",
+    "La Lune passe dans votre maison 4 : envie de cocon et de famille.",
+    "La Lune éclaire votre maison 5 : légèreté, jeu et flirt.",
+    "La Lune entre dans votre maison 6 : organisation et petits soins au programme.",
+    "La Lune fait face à votre signe : l’autre prend toute la place.",
+    "La Lune plonge dans votre maison 8 : émotions intenses, questions d’argent partagé.",
+    "La Lune voyage dans votre maison 9 : envie d’ailleurs et de grandes idées.",
+    "La Lune culmine dans votre maison 10 : vous êtes sous le regard des autres.",
+    "La Lune visite votre maison 11 : amis, réseau et projets à plusieurs.",
+    "La Lune se cache dans votre maison 12 : besoin de calme et de recul."
+  ];
+
+  var OPEN = {
+    amour: [
+      ["Les échanges amoureux manquent de douceur.", "Le cœur est sur la défensive : un mot de travers peut piquer."],
+      ["Côté sentiments, l’ambiance hésite entre tendresse et agacement.", "Votre vie affective avance au ralenti, sans drame pour autant."],
+      ["Climat sentimental paisible, sans grande surprise.", "Le cœur est calme : place aux gestes simples."],
+      ["Votre charme opère, les regards se tournent vers vous.", "Les liens se resserrent, la complicité revient facilement."],
+      ["Le ciel joue les entremetteurs : l’amour est à portée de main.", "Magnétisme au maximum : c’est le moment de vous déclarer."]
+    ],
+    argent: [
+      ["Prudence avec la carte bancaire : les dépenses impulsives guettent.", "Vos finances demandent de la vigilance, un imprévu peut surgir."],
+      ["Budget un peu serré, mieux vaut reporter les gros achats.", "L’argent rentre, mais ressort aussi vite."],
+      ["Situation financière stable, gardez le cap.", "Ni gain ni perte notable : le bon moment pour faire vos comptes."],
+      ["Une bonne idée pourrait devenir une bonne affaire.", "Les astres favorisent les négociations et les petits gains."],
+      ["Flair financier remarquable : vos intuitions sont payantes.", "Le ciel ouvre les vannes, une rentrée d’argent se profile."]
+    ],
+    travail: [
+      ["Les tensions au bureau sont palpables, évitez les sujets qui fâchent.", "Retards et malentendus compliquent vos dossiers."],
+      ["Vous avancez, avec quelques grains de sable dans les rouages.", "Concentration en dents de scie : découpez vos tâches."],
+      ["Rythme régulier, efficace sans être spectaculaire.", "Travail sans histoire : vous gérez l’essentiel."],
+      ["Votre efficacité impressionne, les dossiers se débloquent.", "Bon moment pour présenter vos idées à l’équipe."],
+      ["Productivité en feu : tout ce que vous touchez avance.", "Vos talents sont enfin reconnus à leur juste valeur."]
+    ],
+    reussite: [
+      ["Vos ambitions se heurtent à des obstacles, patience.", "Ce n’est pas l’heure de jouer gros : faites profil bas."],
+      ["Les résultats tardent, mais vos efforts ne sont pas perdus.", "Avancez par petites étapes, le sprint attendra."],
+      ["Vos projets suivent leur cours sans accroc.", "Objectifs tenus, sans plus : la régularité paiera."],
+      ["Une porte s’entrouvre : saisissez l’occasion.", "Votre audace est récompensée, osez demander."],
+      ["Les étoiles s’alignent pour vous : visez haut.", "Votre heure de gloire : la réussite devient visible."]
+    ],
+    forme: [
+      ["La fatigue est en embuscade, ménagez-vous.", "Énergie en berne : votre corps réclame une pause."],
+      ["Vitalité moyenne, quelques coups de mou à prévoir.", "Nervosité possible : respirez avant de réagir."],
+      ["Forme correcte, à entretenir sans excès.", "Énergie stable : bougez un peu, mangez bien."],
+      ["Bonne dynamique physique, vous avez du ressort.", "Le moral et la forme sont au rendez-vous."],
+      ["Énergie débordante : canalisez-la dans le sport.", "Vous rayonnez, rien ne semble vous fatiguer."]
+    ]
+  };
+  var ADV = {
+    amour: [["Écoutez avant de répondre.", "Évitez les reproches par message.", "Laissez retomber la pression avant d’en parler."],
+            ["Un petit message fera plaisir.", "Prévoyez un moment à deux, même court.", "Restez naturel, cela suffit."],
+            ["Osez le premier pas.", "Proposez une sortie improvisée.", "Dites ce que vous ressentez, maintenant."]],
+    argent: [["Ne signez rien sans relire.", "Reportez l’achat coup de cœur.", "Vérifiez vos prélèvements."],
+             ["Faites le tri dans vos abonnements.", "Mettez un peu de côté.", "Comparez avant d’acheter."],
+             ["Lancez la négociation.", "Tentez la demande d’augmentation.", "Suivez votre intuition, raisonnablement."]],
+    travail: [["Relisez deux fois vos mails.", "Gardez les réunions courtes.", "Ne prenez pas les critiques pour vous."],
+              ["Videz votre boîte de réception.", "Avancez sur une tâche à la fois.", "Planifiez la suite de la journée."],
+              ["Présentez votre projet.", "Prenez la parole en réunion.", "Attaquez le dossier difficile."]],
+    reussite: [["Consolidez avant d’avancer.", "Revoyez vos objectifs à la baisse, pour l’instant.", "Gardez vos plans pour vous."],
+               ["Notez vos trois priorités.", "Relancez un contact utile.", "Avancez sans brûler les étapes."],
+               ["Visez plus grand que prévu.", "Mettez-vous en avant.", "Lancez ce que vous repoussez."]],
+    forme: [["Couchez-vous tôt ce soir.", "Buvez un grand verre d’eau.", "Une pause de dix minutes s’impose."],
+            ["Marchez un quart d’heure.", "Étirez-vous entre deux tâches.", "Allégez le prochain repas."],
+            ["Profitez-en pour faire du sport.", "Sortez prendre l’air.", "Lancez-vous un petit défi physique."]]
+  };
+
+  /* Étoiles brillantes proches de l’écliptique : longitude et latitude écliptiques J2000 (degrés) */
+  var STARS = [
+    ["Diphda", 2.6, -20.8, 2.0], ["Alpheratz", 14.3, 25.7, 2.1, 1], ["Mirach", 30.4, 25.9, 2.1], ["Sheratan", 34.0, 8.5, 2.6],
+    ["Hamal", 37.7, 10.0, 2.0, 1], ["Algol", 56.2, 22.4, 2.1], ["Pléiades", 60.0, 4.1, 2.9, 1], ["Aldébaran", 69.8, -5.5, 0.9, 1],
+    ["Rigel", 76.8, -31.1, 0.1], ["Bellatrix", 81.0, -16.8, 1.6], ["Capella", 81.9, 22.9, 0.1], ["Bételgeuse", 88.8, -16.0, 0.5, 1],
+    ["Alhena", 99.1, -6.7, 1.9], ["Sirius", 104.1, -39.6, -1.5], ["Castor", 110.2, 10.1, 1.6], ["Pollux", 113.2, 6.7, 1.1, 1],
+    ["Procyon", 115.8, -16.0, 0.4], ["Acubens", 133.6, -5.1, 4.2], ["Algieba", 149.6, 8.8, 2.1], ["Régulus", 149.8, 0.5, 1.4, 1],
+    ["Zosma", 161.3, 14.3, 2.6], ["Dénébola", 171.6, 12.3, 2.1], ["Vindemiatrix", 189.9, 16.2, 2.8], ["Porrima", 190.1, 2.8, 2.7],
+    ["Spica", 203.8, -2.1, 1.0, 1], ["Arcturus", 204.2, 30.7, -0.1], ["Zubenelgenubi", 225.1, 0.3, 2.8], ["Zubeneschamali", 229.4, 8.5, 2.6],
+    ["Dschubba", 242.6, -2.0, 2.3], ["Antarès", 249.8, -4.6, 1.0, 1], ["Shaula", 264.6, -13.8, 1.6], ["Kaus Australis", 275.1, -10.8, 1.8],
+    ["Nunki", 282.4, -3.4, 2.0], ["Altaïr", 301.8, 29.3, 0.8], ["Sadalsuud", 323.4, 8.6, 2.9], ["Deneb Algedi", 323.6, -2.6, 2.9],
+    ["Sadalmelik", 333.4, 10.7, 3.0], ["Fomalhaut", 333.9, -21.1, 1.2, 1], ["Markab", 353.5, 19.4, 2.5], ["Scheat", 359.4, 31.1, 2.4]
+  ];
+
+  /* ================= Calcul astronomique ================= */
+  var D2R = Math.PI / 180, H = 3600000;
+  function norm(x) { x %= 360; return x < 0 ? x + 360 : x; }
+  function wrap180(x) { x = norm(x); return x > 180 ? x - 360 : x; }
+  function centuries(t) { return (t - Date.UTC(2000, 0, 1, 12)) / (36525 * 864e5); }
+  var PRECESS = 1.3969713 * centuries(Date.now()); // passage J2000 → équinoxe de la date
+
+  function eclLon(id, t) {
+    var e = A.Ecliptic(A.GeoVector(id, new Date(t), true));
+    return norm(e.elon + 1.3969713 * centuries(t));
+  }
+  function angles(t, city) {
+    var gst = A.SiderealTime(new Date(t));
+    var ramc = norm(gst * 15 + city.lon) * D2R;
+    var eps = (23.439291 - 0.0130042 * centuries(t)) * D2R;
+    var asc = norm(Math.atan2(Math.cos(ramc), -(Math.sin(ramc) * Math.cos(eps) + Math.tan(city.lat * D2R) * Math.sin(eps))) / D2R);
+    var mc = norm(Math.atan2(Math.sin(ramc), Math.cos(ramc) * Math.cos(eps)) / D2R);
+    return { asc: asc, mc: mc };
+  }
+  function computeSky(t, withSpeed, retroFrom) {
+    var by = {}, list = [];
+    PLANETS.forEach(function (p) {
+      var lon = eclLon(p.id, t), speed = null, retro = false;
+      if (withSpeed) {
+        speed = wrap180(eclLon(p.id, t + 6 * H) - eclLon(p.id, t - 6 * H)) / 0.5;
+        retro = speed < 0;
+      } else if (retroFrom) { retro = retroFrom.by[p.id].retro; }
+      var b = { id: p.id, name: p.name, g: p.g, lon: lon, sign: Math.floor(lon / 30), deg: lon % 30, speed: speed, retro: retro };
+      by[p.id] = b; list.push(b);
+    });
+    var an = angles(t, st.city);
+    return { t: t, by: by, list: list, asc: an.asc, mc: an.mc };
+  }
+  function house(planetSign, s) { return ((planetSign - s + 12) % 12) + 1; }
+
+  /* ================= Moteur d’horoscope ================= */
+  function gauss(off, s) { return Math.exp(-(off * off) / (2 * s * s)); }
+  function scoreSign(sky, s) {
+    var pt = s * 30 + 15, out = {};
+    THEMES.forEach(function (th) {
+      var raw = 0, f = [];
+      Object.keys(th.w).forEach(function (pid) {
+        var w = th.w[pid], b = sky.by[pid], d = Math.abs(wrap180(b.lon - pt));
+        ASPECTS.forEach(function (asp) {
+          var c = gauss(d - asp.a, 9); if (c < 0.04) return;
+          var v = asp.a === 0 ? NATURE[pid] + 0.25 : asp.v + 0.3 * NATURE[pid];
+          var val = w * v * c; raw += val; f.push({ k: "asp", pid: pid, asp: asp, val: val, from: b.sign });
+        });
+        var h = house(b.sign, s);
+        if (th.houses.indexOf(h) >= 0) { var hv = w * 0.5 * (NATURE[pid] + 0.35); raw += hv; f.push({ k: "house", pid: pid, h: h, val: hv }); }
+      });
+      Object.keys(th.retro).forEach(function (pid) {
+        if (sky.by[pid].retro) { raw += th.retro[pid]; f.push({ k: "retro", pid: pid, val: th.retro[pid], th: th }); }
+      });
+      var da = Math.abs(wrap180(sky.asc - pt));
+      ASPECTS.forEach(function (asp) {
+        var c = gauss(da - asp.a, 10); if (c < 0.04) return;
+        var val = th.asc * ASC_V[asp.a] * c; raw += val; f.push({ k: "asc", asp: asp, val: val, sign: Math.floor(sky.asc / 30) });
+      });
+      var score = Math.max(2, Math.min(99, Math.round(50 + 46 * Math.tanh(raw / 1.4))));
+      out[th.key] = { score: score, raw: raw, f: f };
+    });
+    var sum = 0; THEMES.forEach(function (th) { sum += out[th.key].score; });
+    out.total = Math.round(sum / THEMES.length);
+    return out;
+  }
+  function level(score) { return score < 32 ? 0 : score < 45 ? 1 : score < 58 ? 2 : score < 72 ? 3 : 4; }
+  function hash(str) { var h = 2166136261; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function pick(arr, key) { return arr[hash(key) % arr.length]; }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function describe(x, s) {
+    if (!x) return "aucune planète ne s’impose, le ciel reste neutre pour vous";
+    if (x.k === "asp") {
+      var P = PL[x.pid].name;
+      if (x.asp.a === 0) return x.from === s ? P + " traverse votre signe" : P + " est en conjonction avec votre signe";
+      return P + " forme " + x.asp.un + " " + x.asp.n + " avec votre signe depuis " + SIGNS[x.from].art;
+    }
+    if (x.k === "house") return PL[x.pid].name + " traverse votre maison " + x.h + ", celle " + HOUSE_TOPIC[x.h];
+    if (x.k === "retro") return PL[x.pid].name + " est rétrograde et ralentit ce secteur";
+    if (x.asp.a === 0) return "l’ascendant de l’heure passe dans votre signe";
+    return "l’ascendant de l’heure, en " + SIGNS[x.sign].name + ", forme " + x.asp.un + " " + x.asp.n + " avec votre signe";
+  }
+  function reading(s, th, res, hk) {
+    var lvl = level(res.score), tier = lvl <= 1 ? 0 : lvl === 2 ? 1 : 2;
+    var positive = res.raw >= 0, dom = null;
+    res.f.forEach(function (x) { if ((positive ? x.val > 0 : x.val < 0) && (!dom || Math.abs(x.val) > Math.abs(dom.val))) dom = x; });
+    return {
+      lvl: lvl,
+      open: pick(OPEN[th.key][lvl], s + "|" + th.key + "|" + hk + "|o"),
+      why: cap(describe(dom, s)) + ".",
+      adv: pick(ADV[th.key][tier], s + "|" + th.key + "|" + hk + "|a")
+    };
+  }
+
+  /* ================= État ================= */
+  var st = { live: true, paused: false, speed: 1, sim: Date.now(), city: CITIES[0], sel: null };
+  var sky = null, prevSky = null, curveSkies = [], curveHK = null, events = [], eventsAt = -1e15;
+  var lastSkyReal = -1e9, lastUiReal = -1e9, lastHourlyReal = -1e9, lastDrawReal = -1e9, lastEventsReal = -1e9, lastHK = null;
+  try { var savedCity = localStorage.getItem("ced-city"); CITIES.forEach(function (c) { if (c.n === savedCity) st.city = c; }); } catch (e) {}
+
+  /* ================= Formatage ================= */
+  var fTime = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  var fHM = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  var fDay = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  var fShortDay = new Intl.DateTimeFormat("fr-FR", { weekday: "short" });
+  function fmtDeg(d) { var dd = Math.floor(d), mm = Math.floor((d - dd) * 60); return dd + "°" + (mm < 10 ? "0" : "") + mm + "′"; }
+  function sameDay(a, b) { var x = new Date(a), y = new Date(b); return x.toDateString() === y.toDateString(); }
+  function fmtEventTime(t, ref) { return (sameDay(t, ref) ? "" : fShortDay.format(new Date(t)).replace(".", "") + " ") + fHM.format(new Date(t)); }
+  function hourOf(t) { return new Date(t).getHours(); }
+  function hourStart(t) { var d = new Date(t); d.setMinutes(0, 0, 0); return d.getTime(); }
+  function g(ch) { return '<span class="sym">' + ch + VS + "</span>"; }
+
+  /* ================= Construction du DOM ================= */
+  var citySel = $("city");
+  CITIES.forEach(function (c) { var o = document.createElement("option"); o.value = c.n; o.textContent = c.n; if (c === st.city) o.selected = true; citySel.appendChild(o); });
+  citySel.addEventListener("change", function () {
+    CITIES.forEach(function (c) { if (c.n === citySel.value) st.city = c; });
+    try { localStorage.setItem("ced-city", st.city.n); } catch (e) {}
+    forceRefresh();
+  });
+
+  var posBody = $("posBody"), posRows = {};
+  PLANETS.concat([{ id: "ASC", name: "Ascendant", g: "AC" }, { id: "MC", name: "Milieu du ciel", g: "MC" }]).forEach(function (p) {
+    var tr = document.createElement("tr");
+    if (p.id === "ASC" || p.id === "MC") tr.className = "angle";
+    tr.innerHTML = '<td class="g">' + (p.id.length > 2 && p.id !== "ASC" ? g(p.g) : '<span style="font-size:.7rem;font-weight:700">' + p.g + "</span>") + '</td><td class="n">' + p.name + '</td><td class="s"></td><td class="d"></td><td class="r"></td>';
+    posBody.appendChild(tr); posRows[p.id] = tr;
+  });
+
+  var chips = $("chips"), cards = $("cards"), cardEls = [];
+  SIGNS.forEach(function (s, i) {
+    var b = document.createElement("button");
+    b.className = "chip"; b.type = "button"; b.setAttribute("aria-pressed", "false"); b.dataset.i = i;
+    b.innerHTML = g(s.g) + s.name;
+    b.addEventListener("click", function () { select(i, false); });
+    chips.appendChild(b);
+
+    var c = document.createElement("article");
+    c.className = "card"; c.tabIndex = 0; c.setAttribute("role", "button"); c.setAttribute("aria-label", "Lire l’horoscope " + s.name);
+    var rows = THEMES.map(function (th) {
+      return '<li data-k="' + th.key + '"><span class="lbl">' + th.name + '</span><span class="bar"><i></i></span><span class="v">–</span><span class="tr" aria-hidden="true"></span></li>';
+    }).join("");
+    c.innerHTML = '<div class="c-head"><div class="c-glyph">' + g(s.g) + '</div><div><h3>' + s.name + '</h3><p>' + s.dates + '</p></div><div class="c-total">–</div></div><p class="c-climate"></p><ul class="c-themes">' + rows + "</ul>";
+    c.addEventListener("click", function () { select(i, true); });
+    c.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(i, true); } });
+    cards.appendChild(c);
+    var refs = { el: c, total: c.querySelector(".c-total"), climate: c.querySelector(".c-climate"), rows: {} };
+    THEMES.forEach(function (th) { var li = c.querySelector('[data-k="' + th.key + '"]'); refs.rows[th.key] = { bar: li.querySelector("i"), v: li.querySelector(".v"), tr: li.querySelector(".tr") }; });
+    cardEls.push(refs);
+  });
+
+  function select(i, scroll) {
+    st.sel = i;
+    try { localStorage.setItem("ced-sign", SIGNS[i].slug); } catch (e) {}
+    if (location.hash !== "#" + SIGNS[i].slug) { try { history.replaceState(null, "", "#" + SIGNS[i].slug); } catch (e) {} }
+    Array.prototype.forEach.call(chips.children, function (b, j) { b.setAttribute("aria-pressed", j === i ? "true" : "false"); });
+    cardEls.forEach(function (c, j) { c.el.classList.toggle("is-sel", j === i); });
+    if (sky) { updateDetail(); updateCurves(); }
+    if (scroll) $("readTitle").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  }
+  function signFromHash() { var h = location.hash.replace("#", ""); for (var i = 0; i < 12; i++) if (SIGNS[i].slug === h) return i; return -1; }
+  window.addEventListener("hashchange", function () { var i = signFromHash(); if (i >= 0 && i !== st.sel) select(i, false); });
+
+  /* ================= Contrôles du temps ================= */
+  var ctlButtons = Array.prototype.slice.call(document.querySelectorAll("#controls .ctl"));
+  function refreshControls() {
+    ctlButtons.forEach(function (b) {
+      var on = false;
+      if (b.dataset.mode === "live") on = st.live;
+      else if (b.dataset.mode === "pause") on = !st.live && st.paused;
+      else if (b.dataset.speed) on = !st.live && !st.paused && st.speed === +b.dataset.speed;
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    $("clock").classList.toggle("is-live", st.live);
+  }
+  ctlButtons.forEach(function (b) {
+    b.addEventListener("click", function () {
+      if (b.dataset.mode === "live") { st.live = true; st.paused = false; st.speed = 1; st.sim = Date.now(); }
+      else if (b.dataset.mode === "pause") { st.live = false; st.paused = true; }
+      else if (b.dataset.speed) { st.live = false; st.paused = false; st.speed = +b.dataset.speed; }
+      else if (b.dataset.step) { st.live = false; st.paused = true; st.sim += (+b.dataset.step) * H; }
+      refreshControls(); forceRefresh();
+    });
+  });
+  function forceRefresh() { lastSkyReal = lastUiReal = lastHourlyReal = lastDrawReal = lastEventsReal = -1e9; curveHK = null; eventsAt = -1e15; }
+
+  /* ================= Carte du ciel (canvas) ================= */
+  var cv = $("wheel"), ctx = cv.getContext("2d"), wrap = $("wheelWrap"), tip = $("tip");
+  var W = 600, dpr = 1, hits = [], segHover = -1;
+  function resize() {
+    var w = Math.max(240, Math.round(wrap.clientWidth));
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.round(w * dpr); cv.height = Math.round(w * dpr); W = w;
+    lastDrawReal = -1e9;
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap); else window.addEventListener("resize", resize);
+  resize();
+
+  function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  var rand = rng(84), FAINT = [];
+  for (var k = 0; k < 760; k++) FAINT.push({ lon: rand() * 360, lat: (rand() - 0.5) * 2 * (rand() * 44), a: 0.12 + rand() * 0.5, s: 0.35 + rand() * 0.9, ph: rand() * 6.28 });
+  var reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function draw(now) {
+    if (!sky) return;
+    var w = W, R = w / 2 * 0.985, cx = w / 2, cy = w / 2, asc = sky.asc;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, w);
+    function ang(lon) { return (180 + (lon - asc)) * D2R; }
+    function P(lon, r) { var a = ang(lon); return [cx + r * Math.cos(a), cy - r * Math.sin(a)]; }
+    var rOut = R, rZin = R * 0.845, rPl = R * 0.715, rAsp = R * 0.47;
+
+    // Disque du ciel
+    var grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+    grd.addColorStop(0, "#2A2A2A"); grd.addColorStop(1, "#191919");
+    ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, rOut, 0, Math.PI * 2); ctx.fill();
+
+    // Sous l’horizon : moitié basse (l’ascendant est toujours à gauche)
+    ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, rZin, 0, Math.PI, false); ctx.closePath();
+    ctx.fillStyle = "rgba(0,0,0,0.32)"; ctx.fill(); ctx.restore();
+
+    // Étoiles faibles
+    var tw = reduceMotion ? 0 : now / 900;
+    ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, rZin - 2, 0, Math.PI * 2); ctx.clip();
+    FAINT.forEach(function (s) {
+      var r = R * (0.585 - s.lat * 0.0062); if (r < R * 0.06) return;
+      var p = P(s.lon + PRECESS, r);
+      var al = s.a * (reduceMotion ? 1 : 0.75 + 0.25 * Math.sin(tw + s.ph));
+      ctx.fillStyle = "rgba(255,255,255," + al.toFixed(3) + ")";
+      ctx.fillRect(p[0], p[1], s.s, s.s);
+    });
+    // Étoiles brillantes
+    ctx.font = "600 " + Math.max(9, R * 0.03) + "px " + "Open Sans, sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    STARS.forEach(function (s) {
+      var r = Math.max(R * 0.3, Math.min(R * 0.81, R * (0.585 - s[2] * 0.0062)));
+      var p = P(s[1] + PRECESS, r), size = Math.max(1.1, (3.2 - s[3]) * 0.75) * (R / 300);
+      ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.beginPath(); ctx.arc(p[0], p[1], size * 2.6, 0, 6.283); ctx.fill();
+      ctx.fillStyle = "#FFFFFF"; ctx.beginPath(); ctx.arc(p[0], p[1], size, 0, 6.283); ctx.fill();
+      if (s[4] && R > 200) { ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.fillText(s[0], p[0], p[1] + size + 3); }
+    });
+    ctx.restore();
+
+    // Anneau du zodiaque
+    for (var s = 0; s < 12; s++) {
+      var a1 = ang(s * 30), a2 = ang(s * 30 + 30);
+      ctx.beginPath(); ctx.arc(cx, cy, rOut, -a1, -a2, true); ctx.arc(cx, cy, rZin, -a2, -a1, false); ctx.closePath();
+      ctx.fillStyle = s === st.sel ? "#4A4429" : (s === segHover ? "#3D3D3D" : (s % 2 ? "#2C2C2C" : "#333333"));
+      ctx.fill();
+      ctx.strokeStyle = "#4A4A4A"; ctx.lineWidth = 1; ctx.stroke();
+    }
+    if (st.sel !== null) {
+      var b1 = ang(st.sel * 30), b2 = ang(st.sel * 30 + 30);
+      ctx.beginPath(); ctx.arc(cx, cy, rOut - 1, -b1, -b2, true); ctx.arc(cx, cy, rZin + 1, -b2, -b1, false); ctx.closePath();
+      ctx.strokeStyle = "#FFD700"; ctx.lineWidth = 2; ctx.stroke();
+    }
+    // Graduations
+    ctx.strokeStyle = "rgba(255,255,255,0.28)"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (var d = 0; d < 360; d++) {
+      var len = d % 10 === 0 ? 0.035 : d % 5 === 0 ? 0.022 : 0.011;
+      var q1 = P(d, rZin), q2 = P(d, rZin + R * len);
+      ctx.moveTo(q1[0], q1[1]); ctx.lineTo(q2[0], q2[1]);
+    }
+    ctx.stroke();
+    // Glyphes des signes
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = Math.round(R * 0.075) + "px " + "Noto Sans Symbols, Segoe UI Symbol, Apple Symbols, sans-serif";
+    for (s = 0; s < 12; s++) {
+      var gp = P(s * 30 + 15, (rOut + rZin) / 2 + R * 0.012);
+      ctx.fillStyle = s === st.sel ? "#FFFFFF" : "#FFD700";
+      ctx.fillText(SIGNS[s].g + VS, gp[0], gp[1]);
+    }
+
+    // Aspects entre planètes
+    ctx.beginPath(); ctx.arc(cx, cy, rAsp, 0, 6.283); ctx.strokeStyle = "#474747"; ctx.lineWidth = 1; ctx.stroke();
+    var L = sky.list;
+    for (var i = 0; i < L.length; i++) for (var j = i + 1; j < L.length; j++) {
+      var sep = Math.abs(wrap180(L[i].lon - L[j].lon));
+      var orb = (L[i].id === "Moon" || L[j].id === "Moon") ? 7 : 5;
+      for (var x = 1; x < ASPECTS.length; x++) {
+        var asp = ASPECTS[x], off = Math.abs(sep - asp.a);
+        if (off > orb) continue;
+        var pa = P(L[i].lon, rAsp), pb = P(L[j].lon, rAsp), strength = 1 - off / orb;
+        ctx.beginPath(); ctx.moveTo(pa[0], pa[1]); ctx.lineTo(pb[0], pb[1]);
+        if (asp.a === 60 || asp.a === 120) { ctx.setLineDash([]); ctx.strokeStyle = "rgba(255,215,0," + (0.25 + 0.6 * strength).toFixed(2) + ")"; }
+        else { ctx.setLineDash([5, 4]); ctx.strokeStyle = "rgba(255,255,255," + (0.2 + 0.55 * strength).toFixed(2) + ")"; }
+        ctx.lineWidth = 1.2 + strength; ctx.stroke();
+      }
+    }
+    ctx.setLineDash([]);
+
+    // Axes : horizon (ASC–DSC) et méridien (MC–FC)
+    var pA = P(asc, rZin), pD = P(asc + 180, rZin), pM = P(sky.mc, rZin), pF = P(sky.mc + 180, rZin);
+    ctx.strokeStyle = "rgba(255,215,0,0.75)"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(pA[0], pA[1]); ctx.lineTo(pD[0], pD[1]); ctx.stroke();
+    ctx.setLineDash([2, 4]); ctx.strokeStyle = "rgba(255,215,0,0.55)";
+    ctx.beginPath(); ctx.moveTo(pM[0], pM[1]); ctx.lineTo(pF[0], pF[1]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.font = "700 " + Math.max(10, R * 0.034) + "px Open Sans, sans-serif";
+    ctx.fillStyle = "#FFD700";
+    var lA = P(asc, rZin - R * 0.05); ctx.textAlign = "left"; ctx.fillText("ASC", lA[0] - R * 0.035 + 4, lA[1] - R * 0.035);
+    var lD = P(asc + 180, rZin - R * 0.05); ctx.textAlign = "right"; ctx.fillText("DSC", lD[0] + R * 0.035 - 4, lD[1] - R * 0.035);
+    var lM = P(sky.mc, rZin - R * 0.06); ctx.textAlign = "center"; ctx.fillText("MC", lM[0], lM[1]);
+
+    // Planètes, écartées pour éviter les chevauchements
+    var order = L.slice().sort(function (p, q) { return p.lon - q.lon; });
+    var disp = order.map(function (p) { return p.lon; }), MIN = 8.5;
+    for (var it = 0; it < 40; it++) {
+      var moved = false;
+      for (var n = 0; n < disp.length; n++) {
+        var m2 = (n + 1) % disp.length, gap = norm(disp[m2] - disp[n]);
+        if (gap < MIN) { var push = (MIN - gap) / 2; disp[n] -= push; disp[m2] += push; moved = true; }
+      }
+      if (!moved) break;
+    }
+    hits = [];
+    var rG = R * 0.043;
+    order.forEach(function (p, n) {
+      var t1 = P(p.lon, rZin), t2 = P(p.lon, rZin - R * 0.045), c = P(disp[n], rPl);
+      ctx.strokeStyle = "#FFD700"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(t1[0], t1[1]); ctx.lineTo(t2[0], t2[1]); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,215,0,0.45)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(t2[0], t2[1]); ctx.lineTo(c[0], c[1]); ctx.stroke();
+      ctx.beginPath(); ctx.arc(c[0], c[1], rG, 0, 6.283);
+      ctx.fillStyle = p.id === "Sun" ? "#FFD700" : "#1C1C1C"; ctx.fill();
+      ctx.strokeStyle = "#FFD700"; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = p.id === "Sun" ? "#333333" : "#FFFFFF";
+      ctx.font = Math.round(R * 0.052) + "px Noto Sans Symbols, Segoe UI Symbol, Apple Symbols, sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(p.g + VS, c[0], c[1] + 1);
+      if (p.retro) {
+        ctx.font = "700 " + Math.max(8, R * 0.026) + "px Open Sans, sans-serif";
+        ctx.fillStyle = "#FFFFFF"; ctx.fillText("R", c[0] + rG * 1.05, c[1] + rG * 0.95);
+      }
+      hits.push({ x: c[0], y: c[1], r: rG + 4, p: p });
+    });
+    ctx.fillStyle = "#FFD700"; ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, 6.283); ctx.fill();
+    wheelGeom = { cx: cx, cy: cy, rOut: rOut, rZin: rZin, asc: asc };
+  }
+  var wheelGeom = null;
+
+  function pointer(e) {
+    var rect = cv.getBoundingClientRect();
+    return { x: (e.clientX - rect.left) * (W / rect.width), y: (e.clientY - rect.top) * (W / rect.width), sx: e.clientX - rect.left, sy: e.clientY - rect.top };
+  }
+  function segAt(pt) {
+    if (!wheelGeom) return -1;
+    var dx = pt.x - wheelGeom.cx, dy = wheelGeom.cy - pt.y, r = Math.hypot(dx, dy);
+    if (r < wheelGeom.rZin || r > wheelGeom.rOut) return -1;
+    var a = Math.atan2(dy, dx) / D2R;
+    return Math.floor(norm(a - 180 + wheelGeom.asc) / 30);
+  }
+  cv.addEventListener("mousemove", function (e) {
+    var pt = pointer(e), hit = null;
+    hits.forEach(function (h) { if (Math.hypot(h.x - pt.x, h.y - pt.y) <= h.r) hit = h; });
+    var seg = hit ? -1 : segAt(pt);
+    if (seg !== segHover) { segHover = seg; lastDrawReal = -1e9; }
+    cv.style.cursor = hit || seg >= 0 ? "pointer" : "default";
+    if (hit) {
+      var p = hit.p, sp = p.speed !== null ? (p.speed >= 0 ? "+" : "") + p.speed.toFixed(p.id === "Moon" ? 1 : 2) + "° par jour" : "";
+      tip.innerHTML = "<strong>" + p.name + (p.retro ? " · rétrograde" : "") + "</strong>" + SIGNS[p.sign].name + " " + fmtDeg(p.deg) + (sp ? "<br>" + sp : "");
+      tip.style.left = pt.sx + "px"; tip.style.top = pt.sy + "px"; tip.hidden = false;
+    } else if (seg >= 0) {
+      tip.innerHTML = "<strong>" + SIGNS[seg].name + "</strong>Cliquez pour lire l’horoscope";
+      tip.style.left = pt.sx + "px"; tip.style.top = pt.sy + "px"; tip.hidden = false;
+    } else tip.hidden = true;
+  });
+  cv.addEventListener("mouseleave", function () { tip.hidden = true; segHover = -1; lastDrawReal = -1e9; });
+  cv.addEventListener("click", function (e) { var seg = segAt(pointer(e)); if (seg >= 0) select(seg, true); });
+
+  /* ================= Lune ================= */
+  function moonPhaseName(ph) {
+    if (ph < 6 || ph >= 354) return "Nouvelle lune";
+    if (ph < 84) return "Premier croissant";
+    if (ph < 96) return "Premier quartier";
+    if (ph < 174) return "Lune gibbeuse croissante";
+    if (ph < 186) return "Pleine lune";
+    if (ph < 264) return "Lune gibbeuse décroissante";
+    if (ph < 276) return "Dernier quartier";
+    return "Dernier croissant";
+  }
+  function drawMoon(ph) {
+    var c = $("moonIcon").getContext("2d"), r = 46, x = 54, y = 54;
+    c.clearRect(0, 0, 108, 108);
+    c.fillStyle = "#3A3A3A"; c.beginPath(); c.arc(x, y, r, 0, 6.283); c.fill();
+    var k = Math.cos(ph * D2R), waxing = ph < 180;
+    c.save(); c.beginPath(); c.arc(x, y, r, 0, 6.283); c.clip();
+    c.fillStyle = "#FFD700"; c.beginPath();
+    // Partie éclairée : demi-disque côté éclairé + ellipse du terminateur
+    c.arc(x, y, r, -Math.PI / 2, Math.PI / 2, !waxing);
+    c.ellipse(x, y, Math.abs(k) * r, r, 0, Math.PI / 2, -Math.PI / 2, (k > 0) === waxing);
+    c.fill(); c.restore();
+  }
+
+  /* ================= Mises à jour ================= */
+  function updateClock() {
+    var t = st.sim;
+    $("clockTime").textContent = fTime.format(new Date(t));
+    $("clockState").textContent = st.live ? "En direct" : st.paused ? "Pause" : "Accéléré";
+    var meta = cap(fDay.format(new Date(t)));
+    if (st.live) {
+      var mins = Math.ceil((hourStart(t) + H - t) / 60000);
+      meta += " · prochaine édition dans " + mins + " min";
+    } else {
+      var diff = (t - Date.now()) / H;
+      meta += " · " + (diff >= 0 ? "+" : "−") + Math.abs(diff).toFixed(diff > -10 && diff < 10 ? 1 : 0).replace(".", ",") + " h par rapport à maintenant";
+    }
+    $("clockMeta").textContent = meta;
+  }
+
+  function updatePanel() {
+    sky.list.forEach(function (b) {
+      var tr = posRows[b.id], cells = tr.children;
+      cells[2].innerHTML = g(SIGNS[b.sign].g) + SIGNS[b.sign].name;
+      cells[3].textContent = fmtDeg(b.deg);
+      cells[4].innerHTML = b.retro ? '<span class="badge" title="Rétrograde">R</span>' : "";
+    });
+    [["ASC", sky.asc], ["MC", sky.mc]].forEach(function (a) {
+      var s = Math.floor(a[1] / 30), cells = posRows[a[0]].children;
+      cells[2].innerHTML = g(SIGNS[s].g) + SIGNS[s].name; cells[3].textContent = fmtDeg(a[1] % 30); cells[4].textContent = "";
+    });
+    $("posNote").textContent = st.city.n;
+    var ph = A.MoonPhase(new Date(sky.t)), illum = Math.round((1 - Math.cos(ph * D2R)) / 2 * 100);
+    var m = sky.by.Moon;
+    $("moonName").textContent = moonPhaseName(ph);
+    $("moonMeta").innerHTML = "Éclairée à " + illum + " % · en " + SIGNS[m.sign].name + " " + fmtDeg(m.deg) + (moonIngress ? "<br>Entre en " + SIGNS[moonIngress.sign].name + " " + fmtEventTime(moonIngress.t, sky.t).replace(/^(\d)/, "à $1") : "");
+    drawMoon(ph);
+  }
+
+  var moonIngress = null;
+  function computeEvents(t0) {
+    var t1 = t0 + 36 * H, step = 15 * 60000, out = [];
+    var s0 = {}, s1 = {};
+    PLANETS.forEach(function (p) { if (p.id !== "Moon") { s0[p.id] = eclLon(p.id, t0); s1[p.id] = eclLon(p.id, t1); } });
+    var prevM = null, prevF = {}, prevT = null;
+    moonIngress = null;
+    for (var t = t0; t <= t1; t += step) {
+      var m = eclLon("Moon", t), fr = (t - t0) / (t1 - t0);
+      if (prevM !== null && Math.floor(m / 30) !== Math.floor(prevM / 30)) {
+        var bnd = Math.floor(m / 30) * 30, frac = wrap180(bnd - prevM) / wrap180(m - prevM);
+        var ev = { t: prevT + frac * step, kind: "ingress", sign: Math.floor(m / 30) };
+        out.push(ev); if (!moonIngress) moonIngress = ev;
+      }
+      PLANETS.forEach(function (p) {
+        if (p.id === "Moon") return;
+        var Lp = norm(s0[p.id] + wrap180(s1[p.id] - s0[p.id]) * fr);
+        ASPECTS.forEach(function (asp) {
+          (asp.a === 0 || asp.a === 180 ? [1] : [1, -1]).forEach(function (sg) {
+            var key = p.id + asp.a + sg, f = wrap180(m - Lp - sg * asp.a), pf = prevF[key];
+            if (pf !== undefined && pf < 0 && f >= 0 && f - pf < 20) out.push({ t: prevT + (-pf / (f - pf)) * step, kind: "asp", pid: p.id, asp: asp });
+            prevF[key] = f;
+          });
+        });
+      });
+      prevM = m; prevT = t;
+    }
+    out.sort(function (a, b) { return a.t - b.t; });
+    return out;
+  }
+  function renderEvents() {
+    var html = events.filter(function (e) { return e.t > st.sim; }).slice(0, 6).map(function (e) {
+      var label = e.kind === "ingress"
+        ? g("☽") + " La Lune entre en " + g(SIGNS[e.sign].g) + SIGNS[e.sign].name
+        : g("☽") + " " + g(e.asp.g) + " " + g(PL[e.pid].g) + " Lune " + e.asp.n + " " + PL[e.pid].name;
+      return "<li><time>" + fmtEventTime(e.t, st.sim) + "</time><span>" + label + "</span></li>";
+    }).join("");
+    $("events").innerHTML = html || "<li><time>—</time><span>Aucun aspect lunaire dans les prochaines heures</span></li>";
+    // Prochain changement d’ascendant
+    var a0 = Math.floor(sky.asc / 30), found = null;
+    for (var i = 1; i <= 240; i++) { var a = angles(st.sim + i * 120000, st.city); if (Math.floor(a.asc / 30) !== a0) { found = { t: st.sim + i * 120000, s: Math.floor(a.asc / 30) }; break; } }
+    $("ascNext").innerHTML = found ? "Ascendant en " + SIGNS[a0].name + " à " + st.city.n + ", passe en " + SIGNS[found.s].name + " à " + fHM.format(new Date(found.t)) + "." : "";
+  }
+
+  function updateCards() {
+    prevSky = computeSky(st.sim - H, false, sky);
+    for (var s = 0; s < 12; s++) {
+      var r = scoreSign(sky, s), pr = scoreSign(prevSky, s), c = cardEls[s];
+      c.total.textContent = r.total;
+      c.climate.textContent = MOON_HOUSE[house(sky.by.Moon.sign, s)];
+      THEMES.forEach(function (th) {
+        var row = c.rows[th.key], v = r[th.key].score;
+        row.bar.style.width = v + "%"; row.v.textContent = v;
+        if (pr) { var dlt = v - pr[th.key].score; row.tr.textContent = dlt >= 2 ? "▲" : dlt <= -2 ? "▼" : "–"; }
+      });
+    }
+  }
+
+  function updateDetail() {
+    if (st.sel === null) return;
+    var s = st.sel, S = SIGNS[s], r = scoreSign(sky, s), hk = Math.floor(st.sim / H);
+    $("editionLabel").textContent = "Édition de " + hourOf(st.sim) + " h · " + st.city.n;
+    $("readTitle").textContent = "Horoscope " + S.name + " de " + hourOf(st.sim) + " h";
+    var texts = THEMES.map(function (th) {
+      var rd = reading(s, th, r[th.key], hk);
+      return '<div class="rd"><div class="rd-head"><h4>' + th.name + '</h4><span class="pill">' + LEVELS[rd.lvl] + '</span><span class="rd-score">' + r[th.key].score + '/100</span></div>' +
+        "<p>" + rd.open + "</p><p class=\"why\"><b>Ciel :</b> " + rd.why + "</p><p class=\"adv\"><b>Conseil :</b> " + rd.adv + "</p></div>";
+    }).join("");
+    var el = $("detail");
+    if (!el.querySelector(".d-texts") || el.dataset.sign !== String(s)) {
+      el.dataset.sign = s;
+      el.innerHTML = '<header class="d-head"><div class="d-glyph">' + g(S.g) + '</div><div><h3 id="dName"></h3><p id="dDates"></p><p class="d-climate" id="dClimate"></p></div><div class="total"><b id="dTotal"></b><span>Score global</span></div></header>' +
+        '<div class="d-texts" id="dTexts"></div><div class="d-curves"><h4>Les 24 prochaines heures</h4><p>Score de chaque thème heure par heure, à partir de maintenant. Survolez une courbe pour lire une heure précise.</p><div id="dCurves"></div></div>';
+    }
+    $("dName").textContent = S.name;
+    $("dDates").textContent = S.dates;
+    $("dClimate").textContent = MOON_HOUSE[house(sky.by.Moon.sign, s)];
+    $("dTotal").textContent = r.total;
+    $("dTexts").innerHTML = texts;
+  }
+
+  function buildCurveSkies() {
+    var hs = hourStart(st.sim); curveSkies = [];
+    for (var i = 0; i <= 24; i++) curveSkies.push(computeSky(hs + i * H, false, sky));
+    curveHK = Math.floor(st.sim / H) + "|" + st.city.n;
+  }
+  function updateCurves() {
+    if (st.sel === null || !curveSkies.length) return;
+    var s = st.sel, box = $("dCurves"); if (!box) return;
+    var series = THEMES.map(function (th) { return curveSkies.map(function (k) { return scoreSign(k, s)[th.key].score; }); });
+    var Wd = 320, Hd = 74, padB = 16, padT = 6, n = 24;
+    function X(i) { return (i / n) * Wd; }
+    function Y(v) { return padT + (1 - v / 100) * (Hd - padT - padB); }
+    box.innerHTML = THEMES.map(function (th, ti) {
+      var v = series[ti], best = 0;
+      v.forEach(function (x, i) { if (x > v[best]) best = i; });
+      var line = v.map(function (x, i) { return (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(x).toFixed(1); }).join(" ");
+      var area = line + " L" + X(n) + " " + Y(0) + " L0 " + Y(0) + " Z";
+      var ticks = "";
+      for (var i = 0; i <= n; i += 6) ticks += '<text x="' + X(i).toFixed(1) + '" y="' + (Hd - 2) + '" font-size="9" fill="#333333" text-anchor="' + (i === 0 ? "start" : i === n ? "end" : "middle") + '">' + hourOf(curveSkies[i].t) + ' h</text>';
+      return '<div class="curve-row" data-ti="' + ti + '"><div class="curve-top"><b>' + th.name + '</b><span class="ro" data-def="Meilleure heure : ' + hourOf(curveSkies[best].t) + ' h (' + v[best] + ')">Meilleure heure : ' + hourOf(curveSkies[best].t) + " h (" + v[best] + ")</span></div>" +
+        '<svg viewBox="0 0 ' + Wd + " " + Hd + '" role="img" aria-label="' + th.name + " : meilleure heure " + hourOf(curveSkies[best].t) + ' h">' +
+        '<line x1="0" x2="' + Wd + '" y1="' + Y(50) + '" y2="' + Y(50) + '" stroke="#D0D0D0" stroke-dasharray="3 3" stroke-width="1"/>' +
+        '<line x1="0" x2="' + Wd + '" y1="' + Y(0) + '" y2="' + Y(0) + '" stroke="#BDBDBD" stroke-width="1"/>' +
+        '<path d="' + area + '" fill="#FFD700" fill-opacity="0.45"/>' +
+        '<path d="' + line + '" fill="none" stroke="#333333" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' +
+        '<circle cx="' + X(best) + '" cy="' + Y(v[best]) + '" r="4" fill="#FFD700" stroke="#333333" stroke-width="2"/>' +
+        '<circle cx="0" cy="' + Y(v[0]) + '" r="4" fill="#333333" stroke="#FFFFFF" stroke-width="2"/>' +
+        '<line class="cross" x1="0" x2="0" y1="' + padT + '" y2="' + Y(0) + '" stroke="#333333" stroke-width="1" visibility="hidden"/>' +
+        ticks + '<rect x="0" y="0" width="' + Wd + '" height="' + Hd + '" fill="transparent"/></svg></div>';
+    }).join("");
+    Array.prototype.forEach.call(box.querySelectorAll(".curve-row"), function (row) {
+      var svg = row.querySelector("svg"), cross = row.querySelector(".cross"), ro = row.querySelector(".ro"), ti = +row.dataset.ti;
+      function move(e) {
+        var rect = svg.getBoundingClientRect(), i = Math.round(((e.clientX - rect.left) / rect.width) * n);
+        i = Math.max(0, Math.min(n, i));
+        cross.setAttribute("x1", X(i)); cross.setAttribute("x2", X(i)); cross.setAttribute("visibility", "visible");
+        ro.textContent = hourOf(curveSkies[i].t) + " h : " + series[ti][i] + "/100";
+      }
+      svg.addEventListener("pointermove", move);
+      svg.addEventListener("pointerdown", move);
+      svg.addEventListener("pointerleave", function () { cross.setAttribute("visibility", "hidden"); ro.textContent = ro.dataset.def; });
+    });
+  }
+
+  /* ================= Boucle ================= */
+  var lastFrame = performance.now();
+  function frame(now) {
+    var dt = Math.min(250, now - lastFrame); lastFrame = now;
+    if (st.live) st.sim = Date.now();
+    else if (!st.paused) st.sim += dt * st.speed;
+    var fast = !st.live && !st.paused && st.speed > 1;
+
+    if (!sky || now - lastSkyReal > (fast ? 50 : 1000)) {
+      sky = computeSky(st.sim, true);
+      lastSkyReal = now;
+    } else {
+      var an = angles(st.sim, st.city); sky.asc = an.asc; sky.mc = an.mc;
+    }
+    var hk = Math.floor(st.sim / H);
+    if ((hk !== lastHK || curveHK === null) && now - lastHourlyReal > (fast ? 700 : 0)) {
+      lastHK = hk; lastHourlyReal = now;
+      buildCurveSkies(); updateCurves();
+    }
+    if (Math.abs(st.sim - eventsAt) > 20 * 60000 && now - lastEventsReal > (fast ? 900 : 0)) {
+      lastEventsReal = now; eventsAt = st.sim; events = computeEvents(st.sim);
+    }
+    if (now - lastUiReal > (fast ? 350 : 5000)) {
+      lastUiReal = now;
+      updatePanel(); renderEvents(); updateCards(); updateDetail();
+    }
+    updateClock();
+    if (fast || now - lastDrawReal > (reduceMotion ? 2000 : 80)) { draw(now); lastDrawReal = now; }
+    requestAnimationFrame(frame);
+  }
+
+  // Signe initial : lien partagé, dernier choix, sinon le signe du Soleil
+  var init = signFromHash();
+  if (init < 0) { try { var sv = localStorage.getItem("ced-sign"); SIGNS.forEach(function (s, i) { if (s.slug === sv) init = i; }); } catch (e) {} }
+  if (init < 0) init = Math.floor(eclLon("Sun", Date.now()) / 30);
+  st.sel = init;
+  sky = computeSky(st.sim, true);
+  select(init, false);
+  refreshControls();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { lastDrawReal = -1e9; });
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
