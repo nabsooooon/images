@@ -809,7 +809,7 @@ table.pos tr.angle td { color: var(--mist); }
   }
 
   /* ================= État ================= */
-  var st = { live: true, paused: false, speed: 1, sim: Date.now(), city: CITIES[0], sel: null };
+  var st = { live: true, paused: false, speed: 1, sim: Date.now(), city: cityByName("Casablanca"), sel: null };
   var sky = null, curveSkies = [], curveHK = null, events = [], meEvents = [], eventsAt = -1e15;
   var lastSkyReal = -1e9, lastUiReal = -1e9, lastHourlyReal = -1e9, lastDrawReal = -1e9, lastEventsReal = -1e9, lastHK = null;
   try { var savedCity = localStorage.getItem("ced-city"); if (savedCity) st.city = cityByName(savedCity); } catch (e) {}
@@ -1073,9 +1073,9 @@ table.pos tr.angle td { color: var(--mist); }
     cardEls.push(refs);
   });
 
-  function select(i, scroll) {
+  function select(i, scroll, quiet) {
     st.sel = i;
-    try { localStorage.setItem("ced-sign", SIGNS[i].slug); } catch (e) {}
+    if (!quiet) { try { localStorage.setItem("ced-sign-v2", SIGNS[i].slug); } catch (e) {} }
     Array.prototype.forEach.call(chips.children, function (b, j) { b.setAttribute("aria-pressed", j === i ? "true" : "false"); });
     cardEls.forEach(function (c, j) { c.el.classList.toggle("is-sel", j === i); });
     mainWheel.dirty = true;
@@ -1471,10 +1471,12 @@ table.pos tr.angle td { color: var(--mist); }
   // Démarrage
   var init = -1, h0 = location.hash.replace("#", "");
   SIGNS.forEach(function (s, i) { if (s.slug === h0) init = i; });
-  if (init < 0) { try { var sv = localStorage.getItem("ced-sign"); SIGNS.forEach(function (s, i) { if (s.slug === sv) init = i; }); } catch (e) {} }
+  if (init < 0) { try { var sv = localStorage.getItem("ced-sign-v2"); SIGNS.forEach(function (s, i) { if (s.slug === sv) init = i; }); } catch (e) {} }
+  // Par défaut : le signe du profil actif (Arij : Poissons), sinon le signe du Soleil du jour
+  if (init < 0 && profiles[activeProfile]) init = computeNatal(profiles[activeProfile]).by.Sun.sign;
   if (init < 0) init = Math.floor(eclLon("Sun", Date.now()) / 30);
   sky = computeSky(st.sim, true);
-  select(init, false);
+  select(init, false, true);
   loadProfile();
   refreshControls();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { mainWheel.dirty = true; meWheel.dirty = true; });
