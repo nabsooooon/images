@@ -28,6 +28,7 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { background: var(--night); }
 body {
   margin: 0; background: var(--night); color: var(--white);
@@ -365,6 +366,13 @@ table.pos tr.angle td { color: var(--mist); }
               <div class="field"><label for="bDate">Date de naissance</label><input type="date" id="bDate" min="1900-01-01" max="2100-12-31"></div>
               <div class="field"><label for="bTime">Heure de naissance</label><input type="time" id="bTime"></div>
               <div class="field full"><label for="bCity">Lieu de naissance</label><select id="bCity"></select></div>
+              <div class="form-grid full" id="otherPlace" hidden>
+                <div class="field full"><label for="bPlace">Nom du lieu</label><input type="text" id="bPlace" maxlength="40" placeholder="Ex. Oujda"></div>
+                <div class="field"><label for="bLat">Latitude (nord +, sud −)</label><input type="text" id="bLat" inputmode="decimal" placeholder="34.68"></div>
+                <div class="field"><label for="bLon">Longitude (est +, ouest −)</label><input type="text" id="bLon" inputmode="decimal" placeholder="-1.91"></div>
+                <div class="field full"><label for="bTz">Fuseau horaire</label><select id="bTz"></select></div>
+                <p class="small full" style="margin:0">Les coordonnées s’obtiennent en cherchant la ville sur une carte en ligne. Le fuseau sert à appliquer l’heure d’été et les changements d’heure de l’époque.</p>
+              </div>
               <label class="check full" for="bUnknown"><input type="checkbox" id="bUnknown">Heure inconnue (ascendant et maisons approximés)</label>
             </div>
             <div class="form-actions">
@@ -1135,7 +1143,7 @@ table.pos tr.angle td { color: var(--mist); }
   function saveProfiles() { try { localStorage.setItem("ced-profiles", JSON.stringify(profiles)); localStorage.setItem("ced-active", String(activeProfile)); } catch (e) {} }
 
   function computeNatal(pf) {
-    var c = cityByName(pf.city), ymd = pf.date.split("-").map(Number), hh = 12, mi = 0;
+    var c = pf.custom ? { n: pf.city, lat: pf.custom.lat, lon: pf.custom.lon, tz: pf.custom.tz } : cityByName(pf.city), ymd = pf.date.split("-").map(Number), hh = 12, mi = 0;
     if (!pf.unknown && pf.time) { var tm = pf.time.split(":").map(Number); hh = tm[0]; mi = tm[1]; }
     var t = localToUtc(ymd[0], ymd[1], ymd[2], hh, mi, c.tz);
     var b = bodies(t, true), an = angles(t, c);
@@ -1154,13 +1162,16 @@ table.pos tr.angle td { color: var(--mist); }
     });
     var nb = document.createElement("button"); nb.type = "button"; nb.className = "pchip"; nb.textContent = "+ Nouveau";
     nb.addEventListener("click", function () {
-      $("bName").value = ""; $("bDate").value = ""; $("bTime").value = ""; $("bUnknown").checked = false; $("bCity").value = st.city.n;
+      $("bName").value = ""; $("bDate").value = ""; $("bTime").value = ""; $("bUnknown").checked = false; $("bCity").value = st.city.n; togglePlace();
       $("formMsg").textContent = "Remplissez le formulaire puis calculez."; $("bName").focus();
     });
     box.appendChild(nb);
   }
   function fillForm(pf) {
-    $("bName").value = pf.name; $("bDate").value = pf.date; $("bTime").value = pf.time || ""; $("bCity").value = pf.city; $("bUnknown").checked = !!pf.unknown;
+    $("bName").value = pf.name; $("bDate").value = pf.date; $("bTime").value = pf.time || ""; $("bUnknown").checked = !!pf.unknown;
+    if (pf.custom) { $("bCity").value = "__other"; $("bPlace").value = pf.city; $("bLat").value = pf.custom.lat; $("bLon").value = pf.custom.lon; $("bTz").value = pf.custom.tz; }
+    else $("bCity").value = pf.city;
+    togglePlace();
   }
   function loadProfile() {
     var pf = profiles[activeProfile];
@@ -1182,6 +1193,17 @@ table.pos tr.angle td { color: var(--mist); }
     $("birthLine").textContent = "Naissance : " + d + (n.noAngles ? ", heure inconnue" : ", " + n.pf.time.replace(":", " h ") + " (" + offTxt + ")") + ", " + n.city.n + ".";
   }
   fillCities($("bCity"), cityByName("Casablanca"));
+  (function () {
+    var o = document.createElement("option"); o.value = "__other"; o.textContent = "Autre lieu (coordonnées)…"; $("bCity").appendChild(o);
+    var zones = [];
+    try { if (Intl.supportedValuesOf) zones = Intl.supportedValuesOf("timeZone"); } catch (e) {}
+    if (!zones.length) CITIES.forEach(function (c) { if (zones.indexOf(c.tz) < 0) zones.push(c.tz); });
+    zones.forEach(function (z) { var op = document.createElement("option"); op.value = z; op.textContent = z.replace(/_/g, " "); $("bTz").appendChild(op); });
+    var guess = "Europe/Paris"; try { guess = Intl.DateTimeFormat().resolvedOptions().timeZone || guess; } catch (e) {}
+    $("bTz").value = zones.indexOf(guess) >= 0 ? guess : zones[0];
+    $("bCity").addEventListener("change", togglePlace);
+  })();
+  function togglePlace() { $("otherPlace").hidden = $("bCity").value !== "__other"; }
   $("birthForm").addEventListener("submit", function (e) {
     e.preventDefault();
     var name = $("bName").value.trim(), date = $("bDate").value, time = $("bTime").value, unknown = $("bUnknown").checked;
@@ -1190,6 +1212,13 @@ table.pos tr.angle td { color: var(--mist); }
     if (!unknown && !/^\d{2}:\d{2}/.test(time)) { $("formMsg").textContent = "Indiquez l’heure de naissance, ou cochez « Heure inconnue »."; $("bTime").focus(); return; }
     var y = +date.slice(0, 4); if (y < 1900 || y > 2100) { $("formMsg").textContent = "Choisissez une année entre 1900 et 2100."; return; }
     var pf = { name: name.slice(0, 40), date: date, time: unknown ? "" : time.slice(0, 5), city: $("bCity").value, unknown: unknown };
+    if (pf.city === "__other") {
+      var place = $("bPlace").value.trim(), lat = parseFloat($("bLat").value.replace(",", ".")), lon = parseFloat($("bLon").value.replace(",", "."));
+      if (!place) { $("formMsg").textContent = "Indiquez le nom du lieu de naissance."; $("bPlace").focus(); return; }
+      if (!(lat >= -66 && lat <= 66)) { $("formMsg").textContent = "Latitude entre −66 et 66 (au-delà, l’ascendant n’est pas calculable)."; $("bLat").focus(); return; }
+      if (!(lon >= -180 && lon <= 180)) { $("formMsg").textContent = "Longitude entre −180 et 180."; $("bLon").focus(); return; }
+      pf.city = place.slice(0, 40); pf.custom = { lat: lat, lon: lon, tz: $("bTz").value };
+    }
     var idx = -1; profiles.forEach(function (p, i) { if (p.name.toLowerCase() === pf.name.toLowerCase()) idx = i; });
     if (idx >= 0) profiles[idx] = pf; else { profiles.push(pf); idx = profiles.length - 1; }
     activeProfile = idx; saveProfiles(); loadProfile();
