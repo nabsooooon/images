@@ -6,6 +6,9 @@
 <title>Ciel en Direct</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#1C1C1C">
+<link rel="manifest" href="manifest.webmanifest"><!--pwa-->
+<link rel="icon" href="icons/icon-192.png" type="image/png"><!--pwa-->
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><!--pwa-->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -258,8 +261,8 @@ details.block[open] > summary { margin-bottom: 12px; }
 details.block[open] > summary::after { content: "−"; }
 .tabbar { display: none; }
 
-/* ---------- Format mobile (application) ---------- */
-@media (max-width: 720px) {
+/* ---------- Onglets : téléphone, ou application installée ---------- */
+@media (max-width: 720px), (display-mode: standalone) {
   body.tabs { padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
   body.tabs .sky, body.tabs .me, body.tabs .readings, body.tabs .method { display: none; }
   body.tabs[data-tab="ciel"] .sky, body.tabs[data-tab="ciel"] .method,
@@ -273,6 +276,10 @@ details.block[open] > summary::after { content: "−"; }
   .tabbar a .sym { font-size: 1.25rem; line-height: 1.1; }
   .tabbar a[aria-current="page"] { color: var(--sun); background: var(--night-3); }
 
+}
+
+/* ---------- Format mobile (application) ---------- */
+@media (max-width: 720px) {
   .top .inner { padding-block: 12px 6px; gap: 10px 14px; }
   .brand { width: 100%; }
   .brand-mark { width: 34px; height: 34px; font-size: 19px; }
@@ -1184,7 +1191,7 @@ details.block[open] > summary::after { content: "−"; }
   }
 
   /* ---------- Format mobile : un onglet à la fois ---------- */
-  var TABS = ["mon-theme", "ciel", "signes"], currentTab = "mon-theme", mqTabs = matchMedia("(max-width: 720px)");
+  var TABS = ["mon-theme", "ciel", "signes"], currentTab = "mon-theme", mqTabs = matchMedia("(max-width: 720px), (display-mode: standalone)");
   function isTabs() { return mqTabs.matches; }
   function tabFromHash() {
     var h = location.hash.replace("#", "");
@@ -1632,6 +1639,10 @@ details.block[open] > summary::after { content: "−"; }
   setTab(tabFromHash() || "mon-theme", true);
   if (isTabs()) $("formWrap").open = false;
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { mainWheel.dirty = true; meWheel.dirty = true; });
+  // Application installable : le service worker n’est enregistré que sur un site servi en HTTPS
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    try { navigator.serviceWorker.register("sw.js").catch(function () {}); } catch (e) {}
+  }
   requestAnimationFrame(frame);
 })();
 </script>
