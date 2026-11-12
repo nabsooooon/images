@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ciel en Direct</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#1C1C1C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ciel en Direct">
 <meta name="description" content="Le ciel recalculé en continu, un horoscope personnel en direct à partir du thème natal, et le baromètre des 12 signes.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -63,6 +68,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focu
 .is-live .dot { background: var(--sun); animation: pulse 2s infinite; }
 .is-live .clock-state { color: var(--sun); }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.55); } 70% { box-shadow: 0 0 0 9px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
+.last-move { font-weight: 600; letter-spacing: 0.02em; text-transform: none; color: var(--mist); font-variant-numeric: tabular-nums; }
 .clock-time { font-size: 1.55rem; font-weight: 700; line-height: 1.2; }
 .clock-meta { font-size: 0.78rem; color: var(--mist); }
 .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -165,6 +171,13 @@ table.pos tr.angle td { color: var(--mist); }
 .d-head h3 { margin: 0; font-size: 1.6rem; font-weight: 800; line-height: 1.15; }
 .d-head p { margin: 2px 0 0; }
 .d-climate { font-weight: 600; }
+.perf { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.perf-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-right: 2px; }
+.perf-item { display: inline-flex; align-items: baseline; gap: 6px; border: 1px solid var(--rule); border-radius: 999px; padding: 3px 10px; font-size: 0.82rem; color: var(--ink); background: var(--white); }
+.perf-item i { font-style: normal; }
+.perf-item b { font-weight: 800; }
+.perf-item.up { border-color: var(--ink); }
+.perf-item.down { border-style: dashed; }
 .total { background: var(--ink); color: var(--white); border-radius: 12px; padding: 8px 14px; text-align: center; font-variant-numeric: tabular-nums; }
 .total b { display: block; font-size: 1.7rem; line-height: 1.1; }
 .total span { font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -236,7 +249,71 @@ table.pos tr.angle td { color: var(--mist); }
   .d-head { grid-template-columns: auto minmax(0, 1fr); }
   .d-head .total { grid-column: 1 / -1; justify-self: start; display: flex; gap: 8px; align-items: baseline; }
   .events li { grid-template-columns: 78px 1fr; }
-  .big3 { grid-template-columns: minmax(0, 1fr); }
+  .form-grid { grid-template-columns: minmax(0, 1fr); }
+}
+details.block > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+details.block > summary::-webkit-details-marker { display: none; }
+details.block > summary::after { content: "+"; font-size: 1.1rem; color: var(--white); letter-spacing: 0; }
+details.block[open] > summary { margin-bottom: 12px; }
+details.block[open] > summary::after { content: "−"; }
+.tabbar { display: none; }
+
+/* ---------- Format mobile (application) ---------- */
+@media (max-width: 720px) {
+  body.tabs { padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
+  body.tabs .sky, body.tabs .me, body.tabs .readings, body.tabs .method { display: none; }
+  body.tabs[data-tab="ciel"] .sky, body.tabs[data-tab="ciel"] .method,
+  body.tabs[data-tab="mon-theme"] .me, body.tabs[data-tab="signes"] .readings { display: block; }
+  .tabbar {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: var(--night-2); border-top: 1px solid var(--line);
+    padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+  }
+  .tabbar a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; color: var(--mist); text-decoration: none; font-size: 0.72rem; font-weight: 700; border-radius: 10px; }
+  .tabbar a .sym { font-size: 1.25rem; line-height: 1.1; }
+  .tabbar a[aria-current="page"] { color: var(--sun); background: var(--night-3); }
+
+  .top .inner { padding-block: 12px 6px; gap: 10px 14px; }
+  .brand { width: 100%; }
+  .brand-mark { width: 34px; height: 34px; font-size: 19px; }
+  .brand h1 { font-size: 1.1rem; }
+  .brand p, .nav { display: none; }
+  .top .field { flex: 1 1 0; }
+  .clock { align-items: flex-end; flex: 0 0 auto; }
+  .clock-time { font-size: 1.25rem; }
+  .clock-meta { display: none; }
+
+  .me .inner, .readings .inner { padding-block: 20px 28px; gap: 16px; }
+  .sky .inner { padding-block: 6px 28px; }
+  .method .inner { padding-block: 8px 24px; }
+  .me .sec-head p, .readings .sec-head p, .sky .lede { display: none; }
+  .me h2, .panel h2, .readings h2 { font-size: 1.3rem; }
+
+  /* Mon horoscope : profil, lecture, roue, transits, puis formulaire */
+  .me .me-grid, .me .panel { display: contents; }
+  .me .sec-head { order: 0; }
+  .me .m-prof { order: 1; }
+  .me #meDetail { order: 2; }
+  .me .m-wheel { order: 3; }
+  .me .m-slow { order: 4; }
+  .me .m-moon { order: 5; }
+  .me .m-form { order: 6; }
+  .big3 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .big3 div { padding: 8px; }
+  .big3 b { font-size: 0.86rem; }
+  .big3 b .sym { display: block; margin: 0 0 2px; }
+
+  .detail { padding: 18px 16px; gap: 20px; }
+  .d-head { grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding-bottom: 14px; }
+  .d-glyph { width: 48px; height: 48px; font-size: 24px; }
+  .d-head h3 { font-size: 1.25rem; }
+  .d-head .total { grid-column: 1 / -1; justify-self: start; display: flex; gap: 8px; align-items: baseline; padding: 6px 12px; }
+  .total b { font-size: 1.4rem; }
+
+  .controls, .chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .controls::-webkit-scrollbar, .chips::-webkit-scrollbar { display: none; }
+  .ctl, .chip { flex: 0 0 auto; }
+  .events li { grid-template-columns: 70px 1fr; }
   .form-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -266,7 +343,7 @@ table.pos tr.angle td { color: var(--mist); }
       <select id="city"></select>
     </div>
     <div class="clock is-live" id="clock">
-      <div class="clock-state"><span class="dot"></span><span id="clockState">En direct</span></div>
+      <div class="clock-state"><span class="dot"></span><span id="clockState">En direct</span><span id="lastMove" class="last-move"></span></div>
       <div class="clock-time" id="clockTime">--:--:--</div>
       <div class="clock-meta" id="clockMeta">Chargement du ciel…</div>
     </div>
@@ -338,7 +415,7 @@ table.pos tr.angle td { color: var(--mist); }
       </div>
 
       <div class="me-grid">
-        <div class="wheel-col">
+        <div class="wheel-col m-wheel">
           <div class="wheel-wrap">
             <canvas id="meWheel" role="img" aria-label="Thème natal avec les transits du moment"></canvas>
             <div class="tip" hidden></div>
@@ -352,15 +429,16 @@ table.pos tr.angle td { color: var(--mist); }
         </div>
 
         <div class="panel">
-          <div class="block">
+          <div class="block m-prof">
             <div class="block-head"><span class="eyebrow">Profils</span></div>
             <div class="profiles" id="profiles"></div>
             <div class="big3" id="big3" style="margin-top:14px"></div>
             <p class="birth-line" id="birthLine"></p>
           </div>
 
-          <form class="block" id="birthForm" novalidate>
-            <div class="block-head"><span class="eyebrow">Ajouter ou modifier un thème</span></div>
+          <details class="block m-form" id="formWrap" open>
+            <summary class="eyebrow">Ajouter ou modifier un thème</summary>
+            <form id="birthForm" novalidate>
             <div class="form-grid">
               <div class="field full"><label for="bName">Prénom</label><input type="text" id="bName" autocomplete="off" maxlength="40"></div>
               <div class="field"><label for="bDate">Date de naissance</label><input type="date" id="bDate" min="1900-01-01" max="2100-12-31"></div>
@@ -380,13 +458,14 @@ table.pos tr.angle td { color: var(--mist); }
               <button class="btn-ghost" type="button" id="bDelete">Supprimer ce profil</button>
               <p class="form-msg" id="formMsg" role="status"></p>
             </div>
-          </form>
+            </form>
+          </details>
 
-          <div class="block">
+          <div class="block m-slow">
             <div class="block-head"><span class="eyebrow">Transits de fond</span><span class="eyebrow">écart · tendance</span></div>
             <ul class="events" id="slowTransits"></ul>
           </div>
-          <div class="block">
+          <div class="block m-moon">
             <div class="block-head"><span class="eyebrow">Prochains rendez-vous de la Lune</span></div>
             <ul class="events" id="meEvents"></ul>
           </div>
@@ -445,6 +524,12 @@ table.pos tr.angle td { color: var(--mist); }
     <span>Les thèmes saisis restent dans votre navigateur. Heures affichées dans le fuseau de votre appareil.</span>
   </div>
 </footer>
+
+<nav class="tabbar" id="tabbar" aria-label="Rubriques">
+  <a href="#mon-theme" data-tab="mon-theme"><span class="sym" aria-hidden="true">☉&#xFE0E;</span>Mon horoscope</a>
+  <a href="#ciel" data-tab="ciel"><span class="sym" aria-hidden="true">☽&#xFE0E;</span>Le ciel</a>
+  <a href="#signes" data-tab="signes"><span class="sym" aria-hidden="true">♈&#xFE0E;</span>12 signes</a>
+</nav>
 
 <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
 <script>
@@ -960,10 +1045,22 @@ table.pos tr.angle td { color: var(--mist); }
       ctx.moveTo(q1[0], q1[1]); ctx.lineTo(q2[0], q2[1]);
     }
     ctx.stroke();
-    ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = Math.round(R * 0.075) + "px " + SYMFONT;
+    // Glyphe et nom de chaque signe, écrits le long de l’anneau et toujours à l’endroit
+    var nameSize = Math.max(8, Math.round(R * 0.032));
     for (s = 0; s < 12; s++) {
-      var gp = P(s * 30 + 15, (rOut + rZin) / 2 + R * 0.012);
-      ctx.fillStyle = s === cfg.sel ? "#FFFFFF" : "#FFD700"; ctx.fillText(SIGNS[s].g + VS, gp[0], gp[1]);
+      var am = ang(s * 30 + 15), rot = Math.PI / 2 - am;
+      if (Math.sin(am) < 0) rot += Math.PI;
+      var gp = P(s * 30 + 15, rZin + (rOut - rZin) * 0.64), np = P(s * 30 + 15, rZin + (rOut - rZin) * 0.27);
+      var up = Math.sin(am) >= 0;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.save(); ctx.translate(up ? gp[0] : np[0], up ? gp[1] : np[1]); ctx.rotate(rot);
+      ctx.font = Math.round(R * 0.06) + "px " + SYMFONT;
+      ctx.fillStyle = s === cfg.sel ? "#FFFFFF" : "#FFD700"; ctx.fillText(SIGNS[s].g + VS, 0, 0);
+      ctx.restore();
+      ctx.save(); ctx.translate(up ? np[0] : gp[0], up ? np[1] : gp[1]); ctx.rotate(rot);
+      ctx.font = "700 " + nameSize + "px Open Sans, sans-serif";
+      ctx.fillStyle = s === cfg.sel ? "#FFFFFF" : "rgba(255,255,255,0.78)"; ctx.fillText(SIGNS[s].name.toUpperCase(), 0, 0);
+      ctx.restore();
     }
 
     // Maisons natales (signes entiers)
@@ -1080,11 +1177,44 @@ table.pos tr.angle td { color: var(--mist); }
     cardEls.forEach(function (c, j) { c.el.classList.toggle("is-sel", j === i); });
     mainWheel.dirty = true;
     if (sky) updateSignDetail();
-    if (scroll) $("readTitle").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    if (scroll) {
+      if (isTabs() && currentTab !== "signes") setTab("signes", true);
+      $("readTitle").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    }
   }
+
+  /* ---------- Format mobile : un onglet à la fois ---------- */
+  var TABS = ["mon-theme", "ciel", "signes"], currentTab = "mon-theme", mqTabs = matchMedia("(max-width: 720px)");
+  function isTabs() { return mqTabs.matches; }
+  function tabFromHash() {
+    var h = location.hash.replace("#", "");
+    if (TABS.indexOf(h) >= 0) return h;
+    for (var i = 0; i < SIGNS.length; i++) if (SIGNS[i].slug === h) return "signes";
+    return null;
+  }
+  function setTab(t, keepScroll) {
+    currentTab = t;
+    document.body.classList.toggle("tabs", isTabs());
+    document.body.dataset.tab = t;
+    Array.prototype.forEach.call(document.querySelectorAll("#tabbar a"), function (a) {
+      if (a.dataset.tab === t) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
+    mainWheel.dirty = true; meWheel.dirty = true;
+    if (isTabs() && !keepScroll) window.scrollTo(0, 0);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("#tabbar a"), function (a) {
+    a.addEventListener("click", function (e) {
+      if (!isTabs()) return;
+      e.preventDefault();
+      try { history.replaceState(null, "", "#" + a.dataset.tab); } catch (err) {}
+      setTab(a.dataset.tab);
+    });
+  });
+  mqTabs.addEventListener("change", function () { setTab(currentTab, true); });
   window.addEventListener("hashchange", function () {
     var h = location.hash.replace("#", "");
-    SIGNS.forEach(function (s, i) { if (s.slug === h && i !== st.sel) { select(i, false); $("signes").scrollIntoView(); } });
+    SIGNS.forEach(function (s, i) { if (s.slug === h && i !== st.sel) select(i, false); });
+    var t = tabFromHash(); if (t && isTabs()) setTab(t);
   });
 
   /* ================= Contrôles du temps ================= */
@@ -1108,7 +1238,7 @@ table.pos tr.angle td { color: var(--mist); }
       refreshControls(); forceRefresh();
     });
   });
-  function forceRefresh() { lastSkyReal = lastUiReal = lastHourlyReal = lastDrawReal = lastEventsReal = -1e9; curveHK = null; eventsAt = -1e15; }
+  function forceRefresh() { lastSkyReal = lastUiReal = lastHourlyReal = lastDrawReal = lastEventsReal = -1e9; curveHK = null; eventsAt = -1e15; prevSig = null; lastMoveAt = null; }
 
   /* ================= Lune ================= */
   function moonPhaseName(ph) {
@@ -1162,6 +1292,7 @@ table.pos tr.angle td { color: var(--mist); }
     });
     var nb = document.createElement("button"); nb.type = "button"; nb.className = "pchip"; nb.textContent = "+ Nouveau";
     nb.addEventListener("click", function () {
+      $("formWrap").open = true;
       $("bName").value = ""; $("bDate").value = ""; $("bTime").value = ""; $("bUnknown").checked = false; $("bCity").value = st.city.n; togglePlace();
       $("formMsg").textContent = "Remplissez le formulaire puis calculez."; $("bName").focus();
     });
@@ -1236,13 +1367,14 @@ table.pos tr.angle td { color: var(--mist); }
     var rebuilt = false;
     if (el.dataset.id !== d.id) {
       el.dataset.id = d.id; rebuilt = true;
-      el.innerHTML = '<header class="d-head"><div class="d-glyph">' + d.glyph + '</div><div><h3 class="x-name"></h3><p class="x-sub"></p><p class="d-climate x-climate"></p></div><div class="total"><b class="x-total"></b><span>Score global</span></div></header>' +
+      el.innerHTML = '<header class="d-head"><div class="d-glyph">' + d.glyph + '</div><div><h3 class="x-name"></h3><p class="x-sub"></p><p class="d-climate x-climate"></p></div><div class="total"><b class="x-total"></b><span>Score global</span></div><div class="perf x-perf" aria-label="Évolution du score global"></div></header>' +
         '<div class="d-texts x-texts"></div><div class="d-curves"><h4>Les 24 prochaines heures</h4><p>Score de chaque famille heure par heure, à partir de maintenant. Survolez une courbe pour lire une heure précise.</p><div class="x-curves"></div></div>';
     }
     el.querySelector(".x-name").textContent = d.title;
     el.querySelector(".x-sub").textContent = d.sub;
     el.querySelector(".x-climate").textContent = d.climate;
     el.querySelector(".x-total").textContent = d.total;
+    el.querySelector(".x-perf").innerHTML = d.perf || "";
     el.querySelector(".x-texts").innerHTML = d.items.map(function (it) {
       return '<div class="rd"><div class="rd-head"><h4>' + it.name + '</h4><span class="pill">' + LEVELS[it.lvl] + '</span><span class="rd-score">' + it.score + '/100</span></div>' +
         "<p>" + it.open + '</p><p class="why"><b>Ciel :</b> ' + it.why + '</p><p class="adv"><b>Conseil :</b> ' + it.adv + "</p></div>";
@@ -1363,6 +1495,19 @@ table.pos tr.angle td { color: var(--mist); }
     $("ascNext").innerHTML = found ? "Ascendant en " + SIGNS[a0].name + " à " + st.city.n + ", passe en " + SIGNS[found.s].name + " à " + fHM.format(new Date(found.t)) + "." : "";
   }
 
+  var scoreSig = "", prevSig = null, lastMoveAt = null;
+  // Performance du score global : comparaison avec le ciel d’il y a 6 h, 12 h, 24 h, 48 h et 7 jours
+  var PERF = [[6, "6 h"], [12, "12 h"], [24, "24 h"], [48, "48 h"], [168, "1 semaine"]], perfSkies = null, perfAt = -1e15, perfCity = null;
+  function perfHtml(now, scorer) {
+    if (!perfSkies || Math.abs(st.sim - perfAt) > 10 * 60000 || perfCity !== st.city.n) {
+      perfAt = st.sim; perfCity = st.city.n;
+      perfSkies = PERF.map(function (x) { return computeSky(st.sim - x[0] * H, true); });
+    }
+    return '<span class="perf-label">Performance</span>' + PERF.map(function (x, i) {
+      var d = now - scorer(perfSkies[i]), cls = d > 0 ? "up" : d < 0 ? "down" : "flat";
+      return '<span class="perf-item ' + cls + '"><i>' + x[1] + '</i><b>' + (d > 0 ? "▲ +" : d < 0 ? "▼ −" : "= ") + Math.abs(d) + "</b></span>";
+    }).join("");
+  }
   function updateCards() {
     var prev = computeSky(st.sim - H, false, sky);
     for (var s = 0; s < 12; s++) {
@@ -1371,7 +1516,7 @@ table.pos tr.angle td { color: var(--mist); }
       c.climate.textContent = MOON_HOUSE[house(sky.by.Moon.sign, s)];
       THEMES.forEach(function (th) {
         var row = c.rows[th.key], v = r[th.key].score, dlt = v - pr[th.key].score;
-        row.bar.style.width = v + "%"; row.v.textContent = v;
+        row.bar.style.width = v + "%"; row.v.textContent = v; scoreSig += v + ",";
         row.tr.textContent = dlt >= 2 ? "▲" : dlt <= -2 ? "▼" : "–";
       });
     }
@@ -1382,6 +1527,7 @@ table.pos tr.angle td { color: var(--mist); }
     $("editionLabel").textContent = "Édition de " + hourOf(st.sim) + " h · " + st.city.n;
     $("readTitle").textContent = "Horoscope " + S.name + " de " + hourOf(st.sim) + " h";
     var rebuilt = renderDetail($("detail"), {
+      perf: perfHtml(r.total, function (k) { return scoreSign(k, s).total; }),
       id: "sign" + s, glyph: g(S.g), title: S.name, sub: S.dates, climate: MOON_HOUSE[house(sky.by.Moon.sign, s)], total: r.total,
       items: THEMES.map(function (th) { var rd = reading(s, th, r[th.key], hk); return { name: th.name, lvl: rd.lvl, score: r[th.key].score, open: rd.open, why: rd.why, adv: rd.adv }; })
     });
@@ -1396,7 +1542,9 @@ table.pos tr.angle td { color: var(--mist); }
       $("slowTransits").innerHTML = ""; $("meEvents").innerHTML = ""; return;
     }
     var r = scorePerson(sky, natal), hk = Math.floor(st.sim / H), seed = "me-" + natal.pf.name;
+    THEMES.forEach(function (th) { scoreSig += r[th.key].score + ";"; });
     var rebuilt = renderDetail(el, {
+      perf: perfHtml(r.total, function (k) { return scorePerson(k, natal).total; }),
       id: "me|" + natal.pf.name + "|" + natal.pf.date + "|" + natal.pf.time + "|" + natal.pf.city, glyph: esc(natal.pf.name.charAt(0).toUpperCase()),
       title: "Horoscope de " + natal.pf.name + " · " + hourOf(st.sim) + " h",
       sub: SIGNS[natal.by.Sun.sign].name + (natal.noAngles ? "" : ", ascendant " + SIGNS[natal.ascSign].name) + ", Lune en " + SIGNS[natal.by.Moon.sign].name,
@@ -1456,7 +1604,9 @@ table.pos tr.angle td { color: var(--mist); }
       lastEventsReal = now; eventsAt = st.sim; events = computeEvents(st.sim); meEvents = computeMeEvents(st.sim);
     }
     if (now - lastUiReal > (fast ? 350 : 5000)) {
-      lastUiReal = now; updatePanel(); renderEvents(); updateCards(); updateSignDetail(); updateMe();
+      lastUiReal = now; scoreSig = ""; updatePanel(); renderEvents(); updateCards(); updateSignDetail(); updateMe();
+      if (scoreSig !== prevSig) { if (prevSig !== null) lastMoveAt = st.sim; prevSig = scoreSig; }
+      $("lastMove").textContent = lastMoveAt ? "· a bougé à " + fHM.format(new Date(lastMoveAt)) : "· calcul à " + fHM.format(new Date(st.sim));
     }
     updateClock();
     if (fast || mainWheel.dirty || meWheel.dirty || now - lastDrawReal > (reduceMotion ? 2000 : 80)) {
@@ -1479,6 +1629,8 @@ table.pos tr.angle td { color: var(--mist); }
   select(init, false, true);
   loadProfile();
   refreshControls();
+  setTab(tabFromHash() || "mon-theme", true);
+  if (isTabs()) $("formWrap").open = false;
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { mainWheel.dirty = true; meWheel.dirty = true; });
   requestAnimationFrame(frame);
 })();
